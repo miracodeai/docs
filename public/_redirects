@@ -1,6 +1,0 @@
-# Cloudflare Pages SPA-fallback for unmatched paths. Every prerendered
-# doc page (`/quickstart/index.html`, `/configuration/mira-yml/index.html`,
-# etc.) is served first by Pages' static handler. Anything that doesn't
-# resolve falls through to the React Router SPA fallback so client-side
-# routing can render the page or show our 404 component.
-/*    /__spa-fallback.html   200
