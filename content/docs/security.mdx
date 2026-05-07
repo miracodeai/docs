@@ -74,8 +74,10 @@ Before pointing real PRs at a Mira deployment, work through this list.
    ```
 2. **`ADMIN_PASSWORD`** changed from the default `admin`. Without this, your
    dashboard is open if it's network-reachable.
-3. **TLS in front of Mira.** The image does not terminate TLS. Use a reverse
-   proxy or a platform that handles TLS for you (Railway, Fly, Render).
+3. **TLS in front of Mira.** The image does not terminate TLS. See
+   [TLS examples](/deployment/docker#tls) for Caddy, nginx + Let's Encrypt,
+   and Cloudflare Tunnel configs — or use a PaaS that handles TLS for you
+   (Railway, Fly, Render).
 4. **Restrict ingress to `/github/webhook`** to GitHub's published webhook
    IPs, or front the service with a reverse proxy that does. The rest of the
    service is auth-gated, but reducing attack surface is cheap.

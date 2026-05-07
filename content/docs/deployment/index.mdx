@@ -67,6 +67,9 @@ MIRA_DASHBOARD_URL      # optional but recommended — appears in PR comment lin
 Before pointing real PRs at your deployment:
 
 - [ ] TLS termination in front of Mira (Mira's image doesn't terminate TLS).
+      See [TLS examples](/deployment/docker#tls) — Caddy, nginx + Let's Encrypt,
+      or Cloudflare Tunnel. PaaS deploys ([Railway](/deployment/railway),
+      [Fly](/deployment/fly), [Render](/deployment/render)) handle this for you.
 - [ ] `MIRA_WEBHOOK_SECRET` set to a long random value.
 - [ ] `ADMIN_PASSWORD` changed from `admin`.
 - [ ] Webhook URL in the GitHub App points at `https://your-host/github/webhook`.

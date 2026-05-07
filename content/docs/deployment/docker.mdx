@@ -115,15 +115,128 @@ volumes:
 
 ## TLS
 
-The Mira image does not terminate TLS. Front it with one of:
+The Mira image speaks plain HTTP on port 8000 — it does **not** terminate TLS
+(no certificate, no HTTPS listener). Something else has to accept the HTTPS
+connection from the internet, decrypt it, and forward HTTP to Mira. GitHub
+refuses to deliver webhooks to plain `http://` URLs in most configurations,
+so this step is effectively required.
 
-- A reverse proxy (Caddy, nginx, Traefik) on the same host.
-- A platform load balancer (ALB, Cloud Run, Cloudflare Tunnel).
-- A cloud PaaS that handles TLS for you (Railway, Fly, Render — see those
-  pages).
+Pick one of:
 
-GitHub will refuse to deliver webhooks to plain HTTP in many configurations,
-so TLS is effectively required.
+- **A reverse proxy on the same host**: Caddy, nginx, or Traefik.
+- **A platform load balancer**: AWS ALB, GCP Load Balancer, Cloud Run.
+- **A CDN or tunnel**: Cloudflare proxy, Cloudflare Tunnel.
+- **A PaaS that handles TLS for you**: [Railway](/deployment/railway),
+  [Fly.io](/deployment/fly), or [Render](/deployment/render) — pick one of
+  those and skip this whole section.
+
+### Example: Caddy on the same host
+
+Caddy is the simplest path. It auto-issues and renews Let's Encrypt certs
+with no separate cron job and no `certbot` ceremony. One config file:
+
+<Tabs items={['Caddyfile', 'docker-compose']}>
+  <Tab value="Caddyfile">
+    ```text
+    # /etc/caddy/Caddyfile
+    mira.your-org.com {
+      reverse_proxy localhost:8000
+    }
+    ```
+
+    Caddy fetches and renews the cert on its own. Reload with
+    `sudo systemctl reload caddy`.
+  </Tab>
+  <Tab value="docker-compose">
+    ```yaml
+    services:
+      mira:
+        image: ghcr.io/miracodeai/mira:latest
+        restart: unless-stopped
+        env_file: .env
+        volumes:
+          - mira-data:/data
+
+      caddy:
+        image: caddy:2-alpine
+        restart: unless-stopped
+        ports:
+          - "80:80"
+          - "443:443"
+        volumes:
+          - ./Caddyfile:/etc/caddy/Caddyfile:ro
+          - caddy-data:/data
+          - caddy-config:/config
+
+    volumes:
+      mira-data:
+      caddy-data:
+      caddy-config:
+    ```
+
+    With this `Caddyfile`:
+    ```text
+    mira.your-org.com {
+      reverse_proxy mira:8000
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### Example: nginx with Let's Encrypt (certbot)
+
+If you're already running nginx, certbot wires up a cert in a couple
+of commands:
+
+```nginx
+# /etc/nginx/sites-available/mira
+server {
+  listen 80;
+  server_name mira.your-org.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:8000;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```
+
+```bash
+sudo ln -s /etc/nginx/sites-available/mira /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# Issue and auto-renew the cert
+sudo certbot --nginx -d mira.your-org.com
+```
+
+Certbot rewrites the nginx config to listen on `443` with the new
+certificate and adds a renewal cron entry — set it and forget it.
+
+### Example: Cloudflare Tunnel (no inbound port required)
+
+Useful when the host doesn't have a public IP, or you don't want to open
+ports at all. The tunnel runs `cloudflared` next to Mira and Cloudflare
+forwards encrypted traffic to it:
+
+```yaml
+services:
+  mira:
+    image: ghcr.io/miracodeai/mira:latest
+    restart: unless-stopped
+    env_file: .env
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CF_TUNNEL_TOKEN}
+```
+
+Create the tunnel in the Cloudflare Zero Trust dashboard, point it at
+`http://mira:8000`, and Cloudflare handles HTTPS at the edge — no Let's
+Encrypt or nginx config on your end.
 
 ## Image versions
 
