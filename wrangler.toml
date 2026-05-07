@@ -1,0 +1,16 @@
+# Cloudflare Pages config for the Mira docs site.
+#
+# The docs build is fully static (React Router v7 with `ssr: false` plus
+# prerendering for every MDX page in `content/docs/`), so this file just
+# tells `wrangler pages deploy` where the publish directory lives.
+#
+# Deploy with:
+#   npm run build
+#   wrangler pages deploy ./build/client --project-name mira-docs
+#
+# Or rely on `pages_build_output_dir` and the npm script:
+#   npm run deploy
+
+name = "mira-docs"
+compatibility_date = "2026-05-07"
+pages_build_output_dir = "./build/client"
