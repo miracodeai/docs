@@ -1,0 +1,103 @@
+---
+title: Choosing a model
+description: How OpenRouter routing works, when to split indexing and review models, and which models Mira recognizes.
+---
+
+Mira talks to LLMs through [OpenRouter](https://openrouter.ai), so any model
+OpenRouter supports works. One `OPENROUTER_API_KEY` covers Anthropic, OpenAI,
+Google, DeepSeek, and others — you pay your provider directly with no Mira
+markup.
+
+## How `MIRA_MODEL` resolves
+
+```
+.mira.yml llm.model        ← per-repo override (highest priority)
+   └── env MIRA_MODEL      ← deployment-wide default
+       └── built-in        ← anthropic/claude-sonnet-4-6
+```
+
+The string is whatever the [OpenRouter Models page](https://openrouter.ai/models)
+lists in the format `provider/model-id`.
+
+## Recommended starting points
+
+| Use case | `MIRA_MODEL` | Notes |
+| --- | --- | --- |
+| Default (balanced) | `anthropic/claude-sonnet-4-6` | What Mira ships with. |
+| Fastest reviews | `anthropic/claude-haiku-4-5` | Cheaper and faster. Good for low-stakes repos. |
+| Highest quality | `anthropic/claude-opus-4-6` | Strongest review, most expensive. |
+| OpenAI shop | `openai/gpt-4o` | Or `openai/gpt-4o-mini` for cheap. |
+| Google shop | `google/gemini-2.5-pro` | Or `google/gemini-2.5-flash` for cheap. |
+
+Set it once via env var:
+
+```bash
+export MIRA_MODEL=anthropic/claude-sonnet-4-6
+```
+
+…or per repo in `.mira.yml`:
+
+```yaml
+llm:
+  model: "openai/gpt-4o"
+```
+
+## Splitting indexing and review
+
+Indexing reads every file in your repo to build summaries — it benefits from a
+cheap, fast model. Review reasons over diffs and project context — it benefits
+from a stronger model. You can split them:
+
+```yaml
+llm:
+  indexing_model: "anthropic/claude-haiku-4-5"
+  review_model: "anthropic/claude-sonnet-4-6"
+```
+
+The dashboard's **Settings** page exposes the same split via dropdowns.
+
+## Fallback chain
+
+If the primary model errors (rate limit, transient outage), Mira retries with
+`fallback_model`:
+
+```yaml
+llm:
+  model: "anthropic/claude-sonnet-4-6"
+  fallback_model: "anthropic/claude-haiku-4-5"
+```
+
+The fallback applies to both indexing and review.
+
+## Recognised models
+
+Only models in Mira's registry can be selected from the dashboard — this is to
+keep the per-purpose recommendations and pricing display accurate. The current
+registry lives at [`src/mira/llm/models.json`](https://github.com/miracodeai/mira/blob/main/src/mira/llm/models.json).
+
+| Model | Provider | Input ctx | Output | Indexing | Review |
+| --- | --- | --: | --: | :-: | :-: |
+| `anthropic/claude-haiku-4-5` | Anthropic | 200k | 64k | ✅ recommended | ✅ |
+| `anthropic/claude-sonnet-4-6` | Anthropic | 200k | 64k | — | ✅ recommended |
+| `anthropic/claude-opus-4-6` | Anthropic | 200k | 32k | — | ✅ |
+| `openai/gpt-4o-mini` | OpenAI | 128k | 16k | ✅ | — |
+| `openai/gpt-4o` | OpenAI | 128k | 16k | — | ✅ |
+| `google/gemini-2.5-flash` | Google | 1M | 65k | ✅ | — |
+| `google/gemini-2.5-pro` | Google | 1M | 65k | — | ✅ |
+
+To use a model that isn't on this list, set it directly in `.mira.yml` — Mira
+will pass the string through to OpenRouter. You won't get the dashboard's
+pricing display or the "Recommended" badge for unrecognised models, but
+review/index will work.
+
+## Cost expectations
+
+Order-of-magnitude figures for a medium-sized repo (~50k LOC, ~50 PRs/month):
+
+- **Indexing** (one-time per repo, plus incremental on push): a few cents to
+  a few dollars depending on repo size and model.
+- **Review** (per PR): typically $0.05–$0.50 per PR with a Sonnet/GPT-4o-class
+  model on a small-to-medium diff. Big diffs scale roughly linearly.
+
+The dashboard's **Stats** page tracks token usage and estimated spend per repo
+once you've run a few reviews.

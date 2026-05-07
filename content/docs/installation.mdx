@@ -1,0 +1,122 @@
+---
+title: Install the GitHub App
+description: Create a GitHub App for Mira, configure permissions and events, generate the private key.
+---
+
+Mira runs as a GitHub App you own. Creating it takes ~5 minutes and is a
+one-time setup per organization.
+
+<Callout type="info">
+  Already have a deployment URL? Great. If not, you can fill in the webhook
+  URL with a placeholder, deploy Mira, and then come back to update it.
+</Callout>
+
+## 1. Create the app
+
+Go to [github.com/settings/apps/new](https://github.com/settings/apps/new) (for
+a personal app) or your organization's `/settings/apps/new` page (for an org
+app).
+
+### General
+
+| Field | Value |
+| --- | --- |
+| **GitHub App name** | Whatever you'd like users to see — `Mira`, `acme-mira`, etc. The slug becomes the bot's `@mention` handle. |
+| **Homepage URL** | Your deployment URL, or `https://github.com/miracodeai/mira`. |
+| **Webhook URL** | `https://your-server.com/github/webhook` |
+| **Webhook secret** | A random 32+ byte string. Save it as `MIRA_WEBHOOK_SECRET`. |
+
+<Callout type="warn">
+  Pick a strong webhook secret. Mira validates every webhook with HMAC-SHA256
+  against this value — without it, anyone who finds your webhook URL can
+  forge events.
+</Callout>
+
+### Permissions
+
+Repository permissions:
+
+| Permission | Access | Why |
+| --- | --- | --- |
+| **Pull requests** | Read & write | Post inline comments and walkthroughs. |
+| **Contents** | Read | Read source files for indexing and review context. |
+| **Issues** | Read & write | Receive `@mention` comments and post replies. |
+| **Metadata** | Read | Required by GitHub for any app. |
+| **Checks** | Read & write *(optional)* | Surface review status as a check. |
+
+### Subscribe to events
+
+- Pull request
+- Issue comment
+- Push
+- Installation
+- Installation repositories
+
+### Where can this GitHub App be installed?
+
+Choose **Any account** if you want to share the app, or **Only on this account**
+if it's just for your org.
+
+## 2. Generate a private key
+
+Scroll to the bottom of the app settings page and click **Generate a private
+key**. A `.pem` file will download — keep it safe, you cannot re-download it.
+
+You'll pass the contents of this file to Mira via the `MIRA_GITHUB_PRIVATE_KEY`
+environment variable. Two formats are supported:
+
+```bash
+# Inline (good for Docker / shell)
+export MIRA_GITHUB_PRIVATE_KEY="$(cat private-key.pem)"
+
+# File reference (good for CLI invocation — note the leading @)
+mira serve --private-key @./private-key.pem
+```
+
+## 3. Note the App ID
+
+At the top of the app settings page you'll see a numeric **App ID**. Save it as
+`MIRA_GITHUB_APP_ID`.
+
+## 4. Install the app on repositories
+
+From your app's settings page, click **Install App** in the left sidebar, pick
+the org/account, and either select repos or install on all of them. Mira will
+start indexing on first install — this is normal and only happens once per repo.
+
+## 5. Bot mention name (auto-detected)
+
+Mira detects its own `@mention` handle from the GitHub App's slug at startup
+— call `GET /app` once and use the returned slug as the bot name. So if you
+named the app `acme-mira`, users mention it as `@acme-mira` and Mira already
+knows.
+
+You only need to override this in two cases:
+
+- The slug lookup is failing (network restrictions, GHES proxy quirks). Mira
+  falls back to `miracodeai` and logs a warning — set `MIRA_BOT_NAME` to your
+  actual slug to silence it.
+- You want Mira to listen for a different handle than its slug (e.g. a short
+  alias).
+
+```bash
+export MIRA_BOT_NAME=acme-mira
+```
+
+## GitHub Enterprise Server
+
+If you're running on GitHub Enterprise Server, set:
+
+```bash
+export MIRA_GITHUB_API_URL=https://github.acme-corp.com/api/v3
+export MIRA_GITHUB_GRAPHQL_URL=https://github.acme-corp.com/api/graphql
+```
+
+Mira will route all GitHub API calls through your enterprise endpoint.
+
+## Next
+
+<Cards>
+  <Card title="Deploy Mira" href="/deployment" description="Choose a deploy target and ship the service." />
+  <Card title="Configuration" href="/configuration" description="Tune Mira per repo with .mira.yml and per deployment with environment variables." />
+</Cards>

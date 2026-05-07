@@ -1,0 +1,16 @@
+{
+  "title": "Mira",
+  "pages": [
+    "index",
+    "---Setup---",
+    "quickstart",
+    "installation",
+    "---Configure---",
+    "configuration",
+    "---Deploy---",
+    "deployment",
+    "---Reference---",
+    "features",
+    "security"
+  ]
+}

@@ -1,0 +1,88 @@
+---
+title: Deploying on Render
+description: Use the included render.yaml blueprint to deploy Mira on Render.
+---
+
+Render's blueprint deploys read [`render.yaml`](https://github.com/miracodeai/mira/blob/main/render.yaml)
+straight from the Mira repo — point Render at the repo, paste in your secrets,
+and Render handles the rest.
+
+## render.yaml
+
+The shipped blueprint:
+
+```yaml
+services:
+  - type: web
+    name: mira
+    runtime: image
+    image:
+      url: ghcr.io/miracodeai/mira:latest
+    healthCheckPath: /health
+    envVars:
+      - key: MIRA_GITHUB_APP_ID
+        sync: false
+      - key: MIRA_GITHUB_PRIVATE_KEY
+        sync: false
+      - key: MIRA_WEBHOOK_SECRET
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+```
+
+The `sync: false` lines are important — they tell Render *not* to commit the
+values back to git. You'll set them in the Render dashboard.
+
+## Deploy steps
+
+1. **Connect the repo.** In the Render dashboard, **New +** → **Blueprint** →
+   point at your fork (or the upstream `miracodeai/mira` repo) on the branch
+   you trust.
+2. **Set the secrets.** Render reads `render.yaml`, sees the four `sync: false`
+   env vars, and prompts you for values. Paste them in:
+   - `MIRA_GITHUB_APP_ID`
+   - `MIRA_GITHUB_PRIVATE_KEY` (full PEM, including BEGIN/END)
+   - `MIRA_WEBHOOK_SECRET`
+   - `OPENROUTER_API_KEY`
+3. **Apply the blueprint.** Render pulls the image, exposes a public HTTPS
+   URL, and points its health check at `/health`.
+
+## Add the rest of the env vars
+
+The blueprint only declares the four required-from-secrets values. Add the
+others in the service's **Environment** tab:
+
+```
+ADMIN_PASSWORD=<change from default>
+MIRA_MODEL=anthropic/claude-sonnet-4-6
+MIRA_DASHBOARD_URL=https://your-service.onrender.com
+```
+
+## Add a database
+
+In the Render dashboard, **New +** → **PostgreSQL**, create a managed Postgres
+instance in the same region. Render gives you an internal `DATABASE_URL` —
+copy it into the Mira service's environment. Append `?sslmode=require` for
+production.
+
+If you'd rather stay on SQLite, attach a Render disk to the service mounted at
+`/data/indexes` and set `MIRA_INDEX_DIR=/data/indexes`.
+
+## Wire up the GitHub App
+
+Set the GitHub App's webhook URL to:
+
+```
+https://your-service.onrender.com/github/webhook
+```
+
+Trigger a redelivery to verify.
+
+## Verify
+
+```bash
+curl https://your-service.onrender.com/health
+# → 200 OK
+```
+
+Open the public URL and log in with `admin` / `<ADMIN_PASSWORD>`.

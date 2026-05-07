@@ -1,0 +1,105 @@
+---
+title: Environment variables
+description: Every environment variable Mira reads, what it does, and which deployments need it.
+---
+
+Environment variables are how you wire Mira into your infrastructure: GitHub
+App credentials, OpenRouter key, database URL. Anything that's a secret or a
+deployment detail belongs here, not in `.mira.yml`.
+
+## Required at minimum
+
+These four must be set for `mira serve` to start:
+
+| Variable | Description |
+| --- | --- |
+| `MIRA_GITHUB_APP_ID` | Numeric ID from your GitHub App settings page. |
+| `MIRA_GITHUB_PRIVATE_KEY` | Contents of the `.pem` file generated when you created the GitHub App. The CLI also accepts `@/path/to/key.pem` syntax. |
+| `MIRA_WEBHOOK_SECRET` | Random 32+ byte string. Must match the value you set in the GitHub App's webhook settings. |
+| `OPENROUTER_API_KEY` | Your [OpenRouter](https://openrouter.ai) key. (Mira also accepts `OPENAI_API_KEY` as a fallback name for backwards compatibility.) |
+
+## GitHub App
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_GITHUB_APP_ID` | — | **Required.** App ID. |
+| `MIRA_GITHUB_PRIVATE_KEY` | — | **Required.** PEM contents (or `@/path/to/key.pem` via CLI). |
+| `MIRA_WEBHOOK_SECRET` | — | **Required.** HMAC-SHA256 secret to validate webhooks. |
+| `MIRA_BOT_NAME` | *auto-detected from the App's slug* | Override the bot `@mention` handle. Leave unset and Mira reads its own slug from `GET /app` at startup; falls back to `miracodeai` only if that call fails. |
+| `MIRA_GITHUB_API_URL` | `https://api.github.com` | Override for GitHub Enterprise Server. |
+| `MIRA_GITHUB_GRAPHQL_URL` | `https://api.github.com/graphql` | Override for GitHub Enterprise Server. |
+
+## LLM
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `OPENROUTER_API_KEY` | — | **Required.** Your OpenRouter key. |
+| `OPENAI_API_KEY` | — | Accepted as a fallback for `OPENROUTER_API_KEY`. Don't set both. |
+| `MIRA_MODEL` | `anthropic/claude-sonnet-4-6` | Deployment-wide default model. Per-repo `.mira.yml` overrides this. See [Choosing a model](/configuration/models). |
+
+## Database & storage
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `DATABASE_URL` | *unset* (SQLite) | `postgresql://…` for Postgres. Leave unset to use SQLite at `MIRA_INDEX_DIR`. Always set `?sslmode=require` in production. |
+| `MIRA_INDEX_DIR` | `/data/indexes` (Docker), `./data/indexes` (local) | Where SQLite + per-repo index files live. Persist this directory across container restarts. |
+
+## Dashboard
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `ADMIN_PASSWORD` | `admin` | Dashboard admin password. **Change this before exposing the dashboard.** |
+| `MIRA_DASHBOARD_URL` | *unset* | Public URL of the dashboard, used in PR comment links so reviewers can jump to context pages. |
+| `MIRA_UI_DIST` | `/app/ui_dist` (Docker) | Path to the built React UI. Don't change unless you're hacking on the UI. |
+
+## Server
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PORT` | `8000` | Bind port. Most deploy targets set this for you (Railway, Render). |
+
+## Tuning the learning loop
+
+These are advanced tuning knobs — defaults are fine for almost everyone. They
+control when Mira synthesizes a new rule from feedback signals.
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_FEEDBACK_MIN_DIR` | `3` | Minimum reject events in a directory before Mira will synthesize a directory-scoped rule. |
+| `MIRA_FEEDBACK_MIN_CAT` | `5` | Minimum reject events in a category before synthesizing a category rule. |
+| `MIRA_FEEDBACK_ACCEPT_MIN` | `5` | Minimum events in a category before accept-rate is considered statistically meaningful. |
+| `MIRA_FEEDBACK_ACCEPT_RATE` | `0.8` | Accept-rate threshold above which a category is treated as "trusted". |
+| `MIRA_HUMAN_SYNTH_MAX` | `50` | Max human review comments fed into rule synthesis per merged PR. |
+| `MIRA_HUMAN_SYNTH_MAX_RULES` | `5` | Max rules Mira will synthesize from a single merged PR. |
+
+## Tuning the vulnerability poller
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_VULN_POLL_INTERVAL` | `3600` | Seconds between OSV.dev polls. Lower = fresher CVE data, more API calls. |
+
+## A complete `.env`
+
+```bash
+# GitHub App
+export MIRA_GITHUB_APP_ID=123456
+export MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)"
+export MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
+
+# LLM
+export OPENROUTER_API_KEY=sk-or-v1-your-key-here
+export MIRA_MODEL=anthropic/claude-sonnet-4-6
+
+# Database (Postgres recommended for production; omit for SQLite)
+export DATABASE_URL=postgresql://mira:mira@db.internal:5432/mira?sslmode=require
+
+# Dashboard
+export ADMIN_PASSWORD=replace-me
+export MIRA_DASHBOARD_URL=https://mira.your-org.com
+```
+
+<Callout type="warn">
+  Never commit `.env` or `private-key.pem`. Use your platform's secret manager
+  (Fly secrets, Railway variables, Render env groups, AWS Secrets Manager,
+  Doppler, etc.). See the [security hardening checklist](/security#hardening-checklist).
+</Callout>

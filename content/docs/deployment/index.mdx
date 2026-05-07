@@ -1,0 +1,78 @@
+---
+title: Deployment overview
+description: Pick a deployment target and storage backend for self-hosting Mira.
+---
+
+Every Mira deployment runs the same Docker image
+(`ghcr.io/miracodeai/mira:latest`) with the same environment variables. What
+varies is the host you put it on and the database behind it.
+
+## Pick a host
+
+<Cards>
+  <Card title="Docker (anywhere)" href="/deployment/docker" description="Run the image on any host that runs Docker. Maximum control." />
+  <Card title="Railway" href="/deployment/railway" description="One-click deploy. Easiest path." />
+  <Card title="Fly.io" href="/deployment/fly" description="Use the included fly.toml. Good for global edge deploys." />
+  <Card title="Render" href="/deployment/render" description="Use the included render.yaml blueprint." />
+</Cards>
+
+All four target the same `ghcr.io/miracodeai/mira:latest` image, expose port
+`8000`, and respond to `GET /health`.
+
+## Pick a database
+
+| Backend | Set via | When to use |
+| --- | --- | --- |
+| **SQLite** *(default)* | Leave `DATABASE_URL` unset; mount `MIRA_INDEX_DIR` as a persistent volume | Single-instance deploys, getting started, small teams |
+| **Postgres** | `DATABASE_URL=postgresql://user:pass@host:5432/mira?sslmode=require` | Multi-instance / horizontal scale, production deploys, anyone who'd rather not manage volumes |
+
+SQLite is zero-config and ships in the image. Postgres unlocks horizontal scale
+and is recommended for production.
+
+<Callout type="warn">
+  If you choose SQLite, **mount `MIRA_INDEX_DIR` as a persistent volume**.
+  Without a volume, the container's writable layer holds the database — every
+  redeploy wipes your indexes, vulnerabilities, and stats.
+</Callout>
+
+## Health check
+
+Every Mira deployment exposes:
+
+```
+GET /health → 200 OK
+```
+
+The included `fly.toml` and `render.yaml` already wire this in. For Docker /
+custom platforms, configure `/health` as the readiness/liveness probe.
+
+## Required environment variables
+
+Regardless of host, these must be set (full list at
+[Environment variables](/configuration/environment)):
+
+```bash
+MIRA_GITHUB_APP_ID
+MIRA_GITHUB_PRIVATE_KEY
+MIRA_WEBHOOK_SECRET
+OPENROUTER_API_KEY
+ADMIN_PASSWORD          # change from default before exposing dashboard
+MIRA_MODEL              # optional; defaults to anthropic/claude-sonnet-4-6
+DATABASE_URL            # optional; SQLite if unset
+MIRA_DASHBOARD_URL      # optional but recommended — appears in PR comment links
+```
+
+## Production checklist
+
+Before pointing real PRs at your deployment:
+
+- [ ] TLS termination in front of Mira (Mira's image doesn't terminate TLS).
+- [ ] `MIRA_WEBHOOK_SECRET` set to a long random value.
+- [ ] `ADMIN_PASSWORD` changed from `admin`.
+- [ ] Webhook URL in the GitHub App points at `https://your-host/github/webhook`.
+- [ ] If using Postgres: `?sslmode=require` in `DATABASE_URL`.
+- [ ] If using SQLite: `MIRA_INDEX_DIR` mounted as a persistent volume.
+- [ ] `OPENROUTER_API_KEY` and `MIRA_GITHUB_PRIVATE_KEY` stored in your
+      platform's secret manager — never in plain env files in source control.
+
+Full hardening guidance: [Security](/security).

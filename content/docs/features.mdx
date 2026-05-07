@@ -1,0 +1,148 @@
+---
+title: Features
+description: The full surface of what Mira does — review engine, indexing, security, custom rules, and the learning loop.
+---
+
+This page is a tour. Every item below is included in self-hosted Mira at no
+additional cost.
+
+## Review engine
+
+How Mira reviews PRs.
+
+- **Inline comments with severity and confidence** — every comment is tagged
+  `blocker` / `warning` / `suggestion` / `nitpick` and carries a confidence
+  score. The `filter` block in `.mira.yml` controls which comments survive
+  the noise filter.
+- **PR walkthrough / summary comment** — top-level comment with file coverage,
+  per-severity counts, and (where useful) a Mermaid sequence diagram.
+- **Streaming** — placeholder comment posts within ~1s, walkthrough within
+  ~10s, full review within a minute.
+- **Multi-file reasoning** — Mira reasons across the whole diff, not file by
+  file in isolation.
+- **Parallel chunk review** — large diffs split into chunks reviewed in
+  parallel (`max_concurrent_chunks`).
+- **Dedupe** — cross-chunk and cross-file comments collapsed via Jaccard
+  similarity on titles + bodies.
+- **GitHub suggestion blocks** — actionable fixes posted as suggestion blocks
+  the PR author can accept with one click.
+- **Confidence clamping** — a `blocker` finding forces "Do not merge" overall,
+  regardless of the LLM's initial overall read.
+
+Configure: [`.mira.yml` → `review`](/configuration/mira-yml#review),
+[`.mira.yml` → `filter`](/configuration/mira-yml#filter).
+
+## Codebase intelligence
+
+What Mira knows about your repo before the LLM sees a diff.
+
+- **Full-repo index** — every file gets an LLM-generated summary, stored in
+  SQLite or Postgres.
+- **Manifest extraction** — `package.json`, `requirements.txt`, `pyproject.toml`,
+  `go.mod`, `Dockerfile`. Versions captured exactly. Zero LLM cost.
+- **Dependency graph** — symbol-level relationships across files, exposed in
+  the dashboard with a draggable ReactFlow visualization.
+- **Cross-repo relationships** — when two repos share a dependency, Mira
+  surfaces the link. Useful for blast-radius analysis.
+- **Blast-radius rendering** — SVG + interactive view of what depends on a
+  symbol you're about to change.
+- **Relationship overrides** — manually add or override edges when the
+  detector misses something.
+- **External reference tracking** — track which external packages are used
+  where.
+
+## Vulnerability scanning
+
+CVE alerting on every package in every repo.
+
+- **OSV.dev poll** — hourly background poll (configurable via
+  `MIRA_VULN_POLL_INTERVAL`).
+- **Severity coverage** — surfaces critical / high / moderate / low CVEs with
+  advisory links and known fix versions.
+- **Per-repo CVE badges** — vulnerabilities show inline next to the package
+  listings.
+- **Dashboard widget** — org-wide open-vulnerabilities view, broken down by
+  severity.
+
+Combined with the package index, this gives you incident response: "which
+repos use `lodash@4.17.20`?" → instant answer.
+
+## Custom rules
+
+Codify "we always do it this way."
+
+- **Per-repo rules** — full CRUD, unlimited per repo.
+- **Global rules** — apply to every repo in the org.
+- **Auto-injected** — rules get added to the review prompt automatically; you
+  don't have to remember them on every PR.
+- **Dashboard editor** — `/rules` page in the dashboard.
+
+## Learning from feedback
+
+Mira gets better over time without you writing rules.
+
+- **Reject signal** — comment `@miracodeai reject` on a Mira comment to mark
+  it as not useful. Mira records the event.
+- **Deterministic rule synthesis** — when reject signals concentrate in a
+  category or directory, Mira synthesizes a rule that suppresses similar
+  comments in the future. Tunable via the
+  [`MIRA_FEEDBACK_*` env vars](/configuration/environment#tuning-the-learning-loop).
+- **LLM-powered human-pattern synthesis** — on merged PRs, Mira analyzes the
+  human reviewers' comments and synthesizes recurring themes into rules.
+- **Feedback stats API** — inspect the learning loop in the dashboard.
+- **Synthesized rules visible** — the **Learned rules** dashboard page shows
+  every rule the loop has produced; you can edit or remove any of them.
+
+## Bring your own LLM
+
+- **OpenRouter routing** — one `OPENROUTER_API_KEY` covers Anthropic, OpenAI,
+  Google, DeepSeek, and more.
+- **Pay your provider directly** — no Mira markup, no SaaS middle-tier.
+- **Split indexing vs review** — cheap fast model for indexing, stronger model
+  for review. See [Choosing a model](/configuration/models).
+- **Fallback chain** — primary errors? Retry with `fallback_model`.
+
+## GitHub integration
+
+- **GitHub App** — auto-review every PR.
+- **GitHub Enterprise Server** — set
+  [`MIRA_GITHUB_API_URL`](/configuration/environment#github-app) to point
+  at your GHES instance.
+- **Chat with the bot** — `@miracodeai <question>` on any PR comment thread.
+  The bot answers using the indexed code as context.
+- **Cancel-in-progress indexing** — stop a long-running indexing job from the
+  dashboard.
+
+### PR chat commands
+
+Mention the bot (`@miracodeai` by default; whatever you set `MIRA_BOT_NAME`
+to otherwise) on a PR comment to trigger one of these commands. Anything that
+doesn't match a command falls through to the free-form Q&A handler.
+
+| Command | Aliases | Effect |
+| --- | --- | --- |
+| `review` | `review this`, `review this pr` | Re-run the review on the current head. Useful after pushing fixes. |
+| `review-rest` | `review rest`, `rest`, `continue` | Review files that were skipped due to size caps in the previous pass. |
+| `pause` | — | Apply the `mira-paused` label and stop auto-reviewing this PR. |
+| `resume` | — | Remove the `mira-paused` label and resume auto-reviews. |
+| `reject` *(on an inline comment)* | `dismiss`, `resolve`, `ignore` | Mark a Mira finding as not useful. Resolves the thread and feeds the [learning loop](#learning-from-feedback). |
+| `<anything else>` | — | Free-form question. Mira answers using the indexed code as context. |
+
+## Dashboard and analytics
+
+- **Org-level stats** — total reviews, comments, tokens, per-severity counts.
+- **Time series** — daily / weekly / monthly bar and line charts.
+- **Issue-severity stacked breakdown** per period.
+- **Issue-category breakdown** per period.
+- **Per-repo view** — files indexed, dependencies, blast radius, packages,
+  last-indexed timestamp.
+- **Cost estimates** for indexing.
+- **Review event stream** for live troubleshooting.
+
+## Storage and deployment
+
+- **SQLite or Postgres** — see [Pick a database](/deployment#pick-a-database).
+- **Single Docker image** — `ghcr.io/miracodeai/mira:latest`.
+- **Reference deploy configs** — Railway, Fly.io, Render. See
+  [Deployment](/deployment).
+- **No phone-home, no required telemetry** — see [Security](/security).

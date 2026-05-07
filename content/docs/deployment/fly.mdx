@@ -1,0 +1,123 @@
+---
+title: Deploying on Fly.io
+description: Use the included fly.toml to deploy Mira to Fly.io with edge TLS termination.
+---
+
+Fly is a great fit for Mira: free TLS, fast container startup, and a `fly.toml`
+ships in the repo.
+
+## Prerequisites
+
+- A [Fly account](https://fly.io) and `flyctl` installed (`brew install flyctl`,
+  then `fly auth login`).
+- A clone of the Mira repo (for the `fly.toml`):
+  ```bash
+  git clone https://github.com/miracodeai/mira.git
+  cd mira
+  ```
+
+## fly.toml
+
+The shipped config:
+
+```toml
+app = "mira"
+
+[build]
+  image = "ghcr.io/miracodeai/mira:latest"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+
+[[services.http_checks]]
+  path = "/health"
+  interval = 10000
+  timeout = 2000
+```
+
+Edit the `app = "mira"` line to your preferred app name (Fly app names are
+globally unique).
+
+## Launch
+
+```bash
+fly launch --copy-config --no-deploy
+```
+
+Pick a region close to GitHub's webhook delivery (or close to your
+contributors). Don't deploy yet — secrets first.
+
+## Set secrets
+
+```bash
+fly secrets set \
+  MIRA_GITHUB_APP_ID=123456 \
+  MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)" \
+  MIRA_WEBHOOK_SECRET="$(openssl rand -hex 32)" \
+  OPENROUTER_API_KEY=sk-or-v1-... \
+  MIRA_MODEL=anthropic/claude-sonnet-4-6 \
+  ADMIN_PASSWORD="$(openssl rand -hex 16)" \
+  MIRA_DASHBOARD_URL=https://your-app.fly.dev
+```
+
+Fly stores these encrypted at rest and injects them at runtime — they don't
+appear in `fly.toml` and aren't checked into git.
+
+## Add Postgres
+
+```bash
+fly postgres create --name mira-db
+fly postgres attach mira-db --app your-app
+```
+
+`fly postgres attach` writes a `DATABASE_URL` secret into your app. That's it
+— Mira will pick it up.
+
+## Persistent volume (if you stay on SQLite)
+
+Skip this if you attached Postgres above.
+
+```bash
+fly volumes create mira_indexes --size 5 --region <region>
+```
+
+Add to `fly.toml`:
+
+```toml
+[[mounts]]
+  source = "mira_indexes"
+  destination = "/data/indexes"
+```
+
+And set `MIRA_INDEX_DIR=/data/indexes` as a secret.
+
+## Deploy
+
+```bash
+fly deploy
+```
+
+Fly will pull the image, mount the volume (if any), inject secrets, and start
+the service. Once `fly status` shows it healthy, hit the URL:
+
+```bash
+curl https://your-app.fly.dev/health
+```
+
+## Wire up the GitHub App
+
+In your GitHub App settings, set the webhook URL to:
+
+```
+https://your-app.fly.dev/github/webhook
+```
+
+Save. Trigger a webhook redelivery to confirm.
+
+## Scaling
+
+```bash
+fly scale memory 1024     # bump to 1 GB if indexing large repos
+fly scale count 2         # only with Postgres — multi-instance with SQLite will corrupt the DB
+```

@@ -1,0 +1,108 @@
+---
+title: Quickstart
+description: Deploy Mira, install it on a repository, and watch it review your first pull request.
+---
+
+This guide takes you from zero to a Mira review on a real PR in about ten
+minutes. Pick a deployment target, install the GitHub App, then open a PR.
+
+## 1. Get an OpenRouter API key
+
+Mira talks to OpenRouter under the hood — one key works across Anthropic,
+OpenAI, Google, DeepSeek, and more.
+
+1. Sign up at [openrouter.ai](https://openrouter.ai).
+2. Generate a key. The free tier is enough to test Mira on a few PRs.
+3. Save it as `OPENROUTER_API_KEY`.
+
+## 2. Create a GitHub App
+
+Mira runs as a GitHub App that auto-reviews every PR.
+
+<Callout type="info">
+  The detailed walkthrough is in [Install the GitHub App](/installation).
+  The summary below is the minimum required to start a deployment.
+</Callout>
+
+At [github.com/settings/apps/new](https://github.com/settings/apps/new):
+
+- **Webhook URL** — `https://your-server.com/github/webhook` (you'll fill this
+  in once you've deployed in step 3; you can come back and edit it).
+- **Webhook secret** — generate any 32+ byte random string and save it as
+  `MIRA_WEBHOOK_SECRET`.
+- **Permissions** — Pull Requests (read & write), Contents (read), Issues
+  (read & write), Metadata (read).
+- **Events** — Pull request, Issue comment, Push, Installation.
+- **Private key** — generate a `.pem` and download it.
+
+Note your **App ID** (numeric, top of the app settings page).
+
+## 3. Deploy Mira
+
+Pick the path that fits your stack. Each deploys the same `ghcr.io/miracodeai/mira` image.
+
+<Tabs items={['Docker', 'Railway', 'Fly.io', 'Render']}>
+  <Tab value="Docker">
+    ```bash
+    docker run -p 8000:8000 \
+      -e MIRA_GITHUB_APP_ID=123456 \
+      -e MIRA_GITHUB_PRIVATE_KEY="$(cat private-key.pem)" \
+      -e MIRA_WEBHOOK_SECRET=your-secret \
+      -e MIRA_MODEL=anthropic/claude-sonnet-4-6 \
+      -e OPENROUTER_API_KEY=sk-or-... \
+      -e ADMIN_PASSWORD=change-me \
+      ghcr.io/miracodeai/mira:latest
+    ```
+
+    See [Deploying with Docker](/deployment/docker) for volume mounts,
+    Postgres, and TLS.
+  </Tab>
+  <Tab value="Railway">
+    Click the deploy button on the [Mira README](https://github.com/miracodeai/mira#quick-start),
+    paste your env vars, deploy. Full walkthrough: [Deploying on Railway](/deployment/railway).
+  </Tab>
+  <Tab value="Fly.io">
+    `fly launch` from a clone, set secrets with `fly secrets set …`, then
+    `fly deploy`. Full walkthrough: [Deploying on Fly.io](/deployment/fly).
+  </Tab>
+  <Tab value="Render">
+    Connect the [`render.yaml`](https://github.com/miracodeai/mira/blob/main/render.yaml)
+    blueprint, set the env vars in the Render dashboard. Full walkthrough:
+    [Deploying on Render](/deployment/render).
+  </Tab>
+</Tabs>
+
+Once the service is running, hit `https://your-server.com/health` — you should
+get a `200`.
+
+## 4. Point the GitHub App at your deployment
+
+Go back to your GitHub App's settings and set the webhook URL to
+`https://your-server.com/github/webhook`. Save.
+
+## 5. Install the app on a repository
+
+From the app's public install page, choose a repo (or "All repositories") and
+install.
+
+## 6. Open a pull request
+
+Mira will:
+
+1. Index the repository in the background (one time, takes a few minutes for a
+   small repo).
+2. Post a placeholder review comment within ~1 second.
+3. Stream a walkthrough comment within ~10 seconds.
+4. Post inline comments within a minute.
+
+If anything looks off, tail the server logs — Mira prints a structured event
+for every webhook it receives.
+
+## What's next
+
+<Cards>
+  <Card title="Tune review behaviour" href="/configuration/mira-yml" description="Drop a .mira.yml in your repo to set confidence thresholds, comment caps, and severity floors." />
+  <Card title="Open the dashboard" href="/configuration" description="Browse / on your deployment to see indexed repos, packages, vulnerabilities, and stats." />
+  <Card title="Chat with the bot" href="/features" description="Comment @miracodeai <question> on any PR to ask about the code." />
+  <Card title="Production hardening" href="/security" description="Webhook secrets, TLS, Postgres, secret management — before you go live." />
+</Cards>

@@ -1,0 +1,126 @@
+---
+title: Security
+description: Vulnerability reporting, what Mira does to keep your code safe, and the production hardening checklist.
+---
+
+Mira is **self-hosted only**. There is no Mira-managed cloud service. Your
+code never touches a server we control.
+
+## Reporting a vulnerability
+
+We value the security community's role in keeping Mira safe.
+
+- File a private vulnerability report on GitHub:
+  [Report a vulnerability](https://github.com/miracodeai/mira/security/advisories/new).
+- Or email **support@miracode.ai**.
+- Include steps to reproduce and any relevant context (affected versions,
+  suggested mitigations).
+
+We commit to:
+
+- Acknowledging your report within **3 business days**.
+- Providing a status update within **7 business days**.
+- Crediting you in the advisory and CHANGELOG (unless you prefer to remain
+  anonymous).
+
+We're a small open-source project and do not currently offer a paid bug
+bounty. Reporters are credited in the advisory and CHANGELOG. We deeply
+appreciate responsible disclosure regardless.
+
+### Vulnerability categories
+
+| Priority | Category | Examples |
+| --- | --- | --- |
+| **P0** | Supply chain | Compromise of our CI/CD that points the PyPI package or Docker images to tampered artifacts. |
+| **P1** | Unauthenticated access | Bypassing webhook signature verification, reading dashboard data without a valid session. |
+| **P2** | Authenticated malicious actions | Privilege escalation, prompt-injection that leaks indexed code outside the bot's intended responses. |
+
+### Known non-issues
+
+- Misconfigurations on setup are **explicitly out of scope** — for example,
+  not setting `MIRA_WEBHOOK_SECRET`, leaving `ADMIN_PASSWORD` at the default,
+  or exposing the dashboard publicly without auth.
+- Vulnerabilities in third-party dependencies that don't affect Mira's actual
+  usage — please report those upstream.
+- Issues requiring physical access to the host running Mira.
+
+## Self-hosted posture
+
+When you self-host Mira, the following is true by construction:
+
+- **No data or telemetry leaves your infrastructure.** No phone-home, no
+  usage tracking, no analytics service.
+- **Code never touches a Mira-controlled server.** Your code goes from your
+  repo, through the LLM API key you provided, and back to your Mira instance.
+  We are not in the path.
+- **Indexes are stored locally** in your SQLite file or your Postgres
+  database. There is no central index store.
+- **Webhook signatures verified** with HMAC-SHA256 against
+  `MIRA_WEBHOOK_SECRET`. Invalid signatures rejected at the edge.
+- **GitHub App tokens cached in-process only**, with a 55-minute TTL, and
+  never written to disk. Tokens for installations you've removed expire
+  automatically.
+- **No license keys, no paywalls, no phone-home licensing.** Fully open
+  source under Apache 2.0.
+
+## Hardening checklist
+
+Before pointing real PRs at a Mira deployment, work through this list.
+
+1. **`MIRA_WEBHOOK_SECRET`** set to a long random value (32+ bytes). Without
+   this, anyone who finds your webhook URL can forge events.
+   ```bash
+   openssl rand -hex 32
+   ```
+2. **`ADMIN_PASSWORD`** changed from the default `admin`. Without this, your
+   dashboard is open if it's network-reachable.
+3. **TLS in front of Mira.** The image does not terminate TLS. Use a reverse
+   proxy or a platform that handles TLS for you (Railway, Fly, Render).
+4. **Restrict ingress to `/github/webhook`** to GitHub's published webhook
+   IPs, or front the service with a reverse proxy that does. The rest of the
+   service is auth-gated, but reducing attack surface is cheap.
+5. **Postgres TLS.** If `DATABASE_URL=postgres://…`, append `?sslmode=require`.
+6. **Secrets in a secret manager.** Store `MIRA_GITHUB_PRIVATE_KEY`, LLM API
+   keys, and `DATABASE_URL` in your platform's secret manager (Fly secrets,
+   Railway variables, Render env groups, AWS Secrets Manager, Doppler, …).
+   Never commit them.
+7. **Pin the image version.** Use `ghcr.io/miracodeai/mira:vX.Y.Z`, not
+   `:latest`, and update on a known cadence after release notes.
+
+## Supply chain hardening (project-side) [#supply-chain]
+
+We treat compromise of our own release pipeline as a P0. The protections
+below are what the Mira project maintains on this repository:
+
+1. **Hardware 2FA (FIDO2)** required on every account with write access.
+   SMS / TOTP-only accounts are not allowed; both can be phished.
+2. **Branch protection** on `main`: PR required, ≥1 review, status checks
+   must pass, no force-push, no deletion.
+3. **Default-deny GitHub Actions tokens.** Every workflow declares
+   `permissions: contents: read` at the top and only widens per-job where
+   actually needed. A malicious dependency in CI can't push commits.
+4. **Outside-collaborator workflow approval.** PRs from non-collaborators
+   require a maintainer to click "Approve and run" before any workflow
+   executes — secrets stay unreachable until then.
+5. **Eval secrets gated by environment approval.** `OPENROUTER_API_KEY`
+   lives in the `production` GitHub environment with required reviewers,
+   so even an authorised workflow run can't reach the key without explicit
+   approval.
+6. **Dependabot enabled** for `github-actions`, `pip`, and `npm` — weekly
+   pinned-SHA bump PRs.
+7. **Signed release tags** (`git tag -s v0.1.0`). An attacker who steals
+   a session can't push a fake release tag without the signing key.
+8. **Trusted Publishers** for any future PyPI publication — no long-lived
+   API token to steal; OIDC-bound to this repo.
+9. **Container signing via cosign** (sigstore keyless) on every Docker image
+   release. Verify before deploying:
+   ```bash
+   cosign verify ghcr.io/miracodeai/mira:vX.Y.Z \
+     --certificate-identity-regexp 'https://github.com/miracodeai/mira/' \
+     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+   ```
+
+If you spot a hardening gap on either side, please report it via the
+channels at the top of this page.
+
+For security inquiries, please contact us at **support@miracode.ai**.

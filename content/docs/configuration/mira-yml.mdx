@@ -1,0 +1,120 @@
+---
+title: .mira.yml reference
+description: The full schema for the per-repo .mira.yml configuration file, with defaults and what each key controls.
+---
+
+`.mira.yml` lives in the root of the repository being reviewed. Mira walks up
+the working tree looking for it; if it's missing, the defaults below apply.
+
+The file has four top-level sections: `llm`, `filter`, `review`, and (rarely)
+`database`. Every key is optional — only set what you want to change.
+
+## Full example
+
+```yaml
+# .mira.yml — every key is optional
+llm:
+  model: "anthropic/claude-sonnet-4-6"
+  fallback_model: "anthropic/claude-haiku-4-5"
+  indexing_model: "anthropic/claude-haiku-4-5"
+  review_model: "anthropic/claude-sonnet-4-6"
+  temperature: 0.2
+  max_tokens: 4096
+  max_context_tokens: 120000
+
+filter:
+  confidence_threshold: 0.7
+  max_comments: 5
+  min_severity: "nitpick"
+  exclude_deleted: true
+  max_files: 50
+  exclude_patterns:
+    - "*.lock"
+    - "package-lock.json"
+    - "*.min.js"
+    - "*.svg"
+    - "*.png"
+
+review:
+  context_lines: 3
+  max_diff_size: 250000
+  max_file_size: 50000
+  max_chunks_per_review: 5
+  include_summary: true
+  focus_only_on_problems: false
+  walkthrough: true
+  walkthrough_sequence_diagram: true
+  code_context: true
+  context_token_budget: 8000
+  max_concurrent_chunks: 5
+  self_critique: true
+  security_pass: true
+  agentic_tools: true
+  jit_java_go: true
+```
+
+## `llm`
+
+Controls which model is used and how it's invoked.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `model` | string | `anthropic/claude-sonnet-4-6` | Default model for both indexing and review unless overridden. Any [recognised model](/configuration/models). |
+| `fallback_model` | string | *unset* | If the primary model errors, retry with this one. |
+| `indexing_model` | string | *uses `model`* | Override just for the indexing pass — usually a cheaper/faster model. |
+| `review_model` | string | *uses `model`* | Override just for the review pass — usually a stronger model. |
+| `temperature` | float | `0.2` | Sampling temperature. Reviews are mostly deterministic; raising this is rarely useful. |
+| `max_tokens` | int | `4096` | Cap on output tokens per LLM call. |
+| `max_context_tokens` | int | `120000` | How many input tokens Mira is willing to spend per call. Trims context to fit. |
+
+## `filter`
+
+Controls which comments get posted. Mira filters aggressively by default — the
+goal is "every comment is one you'd want to land."
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `confidence_threshold` | float (0.0–1.0) | `0.7` | Drop comments the LLM rated below this confidence. Raise for less noise; lower for more coverage. |
+| `max_comments` | int | `5` | Hard cap on inline comments per PR. The most severe + most confident `N` are kept. |
+| `min_severity` | string | `nitpick` | Drop comments below this severity. Levels: `nitpick`, `suggestion`, `warning`, `blocker`. |
+| `exclude_patterns` | string[] | lockfiles, minified, images, fonts, archives | Glob patterns of files Mira should never review. |
+| `exclude_deleted` | bool | `true` | Skip files removed by the diff — they aren't there to comment on. |
+| `max_files` | int | `50` | Cap on files reviewed in a single PR. PRs above this are partially reviewed; the skipped files appear in the walkthrough. |
+
+<Callout type="info">
+  A `blocker` severity comment auto-clamps the overall confidence and forces a
+  "Do not merge" recommendation, regardless of the LLM's initial read. This is
+  intentional and not configurable.
+</Callout>
+
+## `review`
+
+Controls *how* Mira reviews — diff sizing, walkthrough behaviour, parallelism.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `context_lines` | int | `3` | Lines of unchanged code shown around each hunk. |
+| `max_diff_size` | int | `250000` | Total diff size budget (chars). Above this, Mira ranks files by priority and skips lowest-priority ones to fit. Skipped files are listed in the walkthrough — invoke `@miracodeai review-rest` to review them. |
+| `max_file_size` | int | `50000` | A single file larger than this is skipped before chunking starts (lockfiles, generated SDKs). |
+| `max_chunks_per_review` | int (1–20) | `5` | Hard ceiling on chunks reviewed in one pass. Above this, the top-priority N run; the rest are listed as skipped. |
+| `include_summary` | bool | `true` | Post a top-level summary comment in addition to inline comments. |
+| `focus_only_on_problems` | bool | `false` | If `true`, only flag bugs / blockers — no improvement suggestions. |
+| `walkthrough` | bool | `true` | Generate a top-level walkthrough comment with file coverage and per-severity stats. |
+| `walkthrough_sequence_diagram` | bool | `true` | Include a Mermaid sequence diagram in the walkthrough where it adds value. |
+| `code_context` | bool | `true` | Pull related symbols / files from the index to give the LLM project context, not just diff context. |
+| `context_token_budget` | int | `8000` | How many tokens of indexed context Mira may add per review. |
+| `max_concurrent_chunks` | int (1–20) | `5` | Parallelism for chunk reviews. Raise if your LLM provider can handle it. |
+| `self_critique` | bool | `true` | Run a second-pass LLM critique on each draft comment before posting. The critic is asked "is this analysis actually correct?"; comments that fail are dropped. Disable for faster reviews when wall-clock time matters more than catching confident-but-wrong findings. |
+| `security_pass` | bool | `true` | Run a dedicated security review pass (XSS, injection, auth bypass, CSRF, SSRF, deserialization, crypto) in parallel with the main review. Uses the *indexing* tier model — set `llm.indexing_model` equal to `llm.review_model` if you want the heavy model on every pass. Findings dedupe against the main pass. |
+| `agentic_tools` | bool | `true` | When the repo is **not** indexed, give the reviewer LLM tools (`read_file`, `grep_repo`) it can call to fetch cross-file context on demand. No effect on indexed repos. |
+| `jit_java_go` | bool | `true` | Whether the JIT cross-file resolver should attempt Java + Go imports. Resolution is heuristic for those languages; a wrong-file pick pollutes the prompt. Toggle off to A/B test JIT impact on Java/Go codebases — the agentic loop still covers cross-file needs on the unindexed path. |
+
+## `database`
+
+Almost nobody sets this in `.mira.yml` — `DATABASE_URL` and `ADMIN_PASSWORD`
+env vars are the right knobs. Documented for completeness:
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `database.url` | string | `""` (SQLite) | `postgresql://user:pass@host:5432/mira` for Postgres. Empty falls back to SQLite at `MIRA_INDEX_DIR`. |
+| `database.admin_password` | string | `admin` | Dashboard admin password. **Set to something else before exposing the dashboard.** |

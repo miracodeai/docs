@@ -1,0 +1,152 @@
+---
+title: Deploying with Docker
+description: Run the official Mira Docker image on any host that runs Docker.
+---
+
+The simplest path. Pull the image, set env vars, mount a volume for SQLite (or
+point at Postgres), and you're running.
+
+## Image
+
+```
+ghcr.io/miracodeai/mira:latest
+```
+
+The image is multi-stage: it builds the React dashboard, then bundles it into
+a Python 3.12 runtime that exposes port `8000` and runs `mira serve` as
+entrypoint. There's no separate UI container.
+
+## Quick run
+
+```bash
+docker run -p 8000:8000 \
+  -e MIRA_GITHUB_APP_ID=123456 \
+  -e MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)" \
+  -e MIRA_WEBHOOK_SECRET=your-secret \
+  -e OPENROUTER_API_KEY=sk-or-... \
+  -e MIRA_MODEL=anthropic/claude-sonnet-4-6 \
+  -e ADMIN_PASSWORD=change-me \
+  ghcr.io/miracodeai/mira:latest
+```
+
+That's enough to start the server. It uses SQLite in the container's writable
+layer — fine for testing, **not for production** (data dies with the container).
+
+## Production-ready: env file + persistent SQLite
+
+```bash
+# .env (do not commit)
+MIRA_GITHUB_APP_ID=123456
+MIRA_GITHUB_PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----\n…
+MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
+OPENROUTER_API_KEY=sk-or-v1-your-key-here
+MIRA_MODEL=anthropic/claude-sonnet-4-6
+ADMIN_PASSWORD=replace-me
+MIRA_DASHBOARD_URL=https://mira.your-org.com
+MIRA_INDEX_DIR=/data/indexes
+```
+
+```bash
+docker run -d --name mira \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  --env-file .env \
+  -v mira-data:/data \
+  ghcr.io/miracodeai/mira:latest
+```
+
+The named volume `mira-data` persists the SQLite database and per-repo indexes
+across restarts and image updates.
+
+## Production-ready: external Postgres
+
+```bash
+docker run -d --name mira \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  --env-file .env \
+  -e DATABASE_URL='postgresql://mira:mira@db.internal:5432/mira?sslmode=require' \
+  -e MIRA_INDEX_DIR=/data/indexes \
+  -v mira-indexes:/data/indexes \
+  ghcr.io/miracodeai/mira:latest
+```
+
+Even with Postgres, Mira keeps per-repo index artifacts on disk under
+`MIRA_INDEX_DIR` — keep a volume for those.
+
+## docker compose
+
+```yaml
+# docker-compose.yml
+services:
+  mira:
+    image: ghcr.io/miracodeai/mira:latest
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://mira:mira@db:5432/mira
+      MIRA_INDEX_DIR: /data/indexes
+    volumes:
+      - mira-indexes:/data/indexes
+    depends_on:
+      - db
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 2s
+      retries: 5
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: mira
+      POSTGRES_PASSWORD: mira
+      POSTGRES_DB: mira
+    volumes:
+      - mira-pgdata:/var/lib/postgresql/data
+
+volumes:
+  mira-indexes:
+  mira-pgdata:
+```
+
+## TLS
+
+The Mira image does not terminate TLS. Front it with one of:
+
+- A reverse proxy (Caddy, nginx, Traefik) on the same host.
+- A platform load balancer (ALB, Cloud Run, Cloudflare Tunnel).
+- A cloud PaaS that handles TLS for you (Railway, Fly, Render — see those
+  pages).
+
+GitHub will refuse to deliver webhooks to plain HTTP in many configurations,
+so TLS is effectively required.
+
+## Image versions
+
+| Tag | What you get |
+| --- | --- |
+| `:latest` | Latest released version. Fine for production if you watch releases. |
+| `:v0.1.0`, `:v0.2.0`, … | Pinned version. Pair with [cosign verification](/security#supply-chain) for tamper-resistant deploys. |
+
+## Verifying the image (cosign)
+
+Container images are signed with sigstore keyless. Verify before deploying:
+
+```bash
+cosign verify ghcr.io/miracodeai/mira:v0.1.0 \
+  --certificate-identity-regexp 'https://github.com/miracodeai/mira/' \
+  --certificate-oidc-issuer https://token.actions.githubusercontent.com
+```
+
+## Logs
+
+Mira writes structured JSON logs to stdout. Pipe them through `docker logs`,
+your platform's log aggregator, or `jq`:
+
+```bash
+docker logs -f mira | jq -R 'fromjson? // .'
+```

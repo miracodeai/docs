@@ -1,0 +1,41 @@
+---
+title: Introduction
+description: The open-source AI code reviewer that reviews your pull requests with the LLM of your choice.
+---
+
+Mira is a self-hostable, fully open-source AI code reviewer. It runs as a
+GitHub App, watches your pull requests, and posts concise inline comments and
+walkthroughs using the LLM of your choice — Anthropic, OpenAI, Google, DeepSeek,
+or anything else available through [OpenRouter](https://openrouter.ai).
+
+Every feature is included — full review engine, codebase indexing, vulnerability
+scanning, custom rules, org-wide package search, dashboard, learning loop. No
+paid tier, no license key, no SaaS upsell.
+
+## Why Mira
+
+- **Bring your own LLM.** Pick a model, point Mira at OpenRouter, pay your
+  provider directly. No Mira markup.
+- **Indexed reviews, not diff-only.** Mira indexes your repository so the LLM
+  reviews diffs with full project context — not just the changed lines.
+- **Low noise by default.** Confidence thresholds, dedupe, severity sorting,
+  per-PR comment caps. Every comment that lands is one you'd want to land.
+- **Learns your team.** Synthesizes rules from rejected comments and from
+  human review patterns on merged PRs.
+- **Self-host on day one.** Single Docker image. SQLite or Postgres. No
+  phone-home, no required telemetry.
+
+## Get started
+
+<Cards>
+  <Card title="Quickstart" href="/quickstart" description="Deploy Mira and review your first PR in under 10 minutes." />
+  <Card title="Install the GitHub App" href="/installation" description="Create the GitHub App, configure permissions, generate the private key." />
+  <Card title="Configuration" href="/configuration" description="Tune Mira per repo with .mira.yml and per deployment with environment variables." />
+  <Card title="Deployment" href="/deployment" description="Docker, Railway, Fly.io, Render — all powered by the same image." />
+  <Card title="Features" href="/features" description="The full surface: review engine, indexing, security, custom rules, learning." />
+  <Card title="Security" href="/security" description="Vulnerability reporting and the production hardening checklist." />
+</Cards>
+
+## License
+
+Apache 2.0. Source at [github.com/miracodeai/mira](https://github.com/miracodeai/mira).

@@ -1,0 +1,89 @@
+---
+title: Deploying on Railway
+description: Use the Mira Railway template to spin up a working deployment in a few clicks.
+---
+
+Railway is the lowest-friction path. Click the deploy button, paste your env
+vars, and you're live.
+
+## One-click deploy
+
+The [Mira README](https://github.com/miracodeai/mira#quick-start) has a
+**Deploy on Railway** button. It clones the [`railway.toml`](https://github.com/miracodeai/mira/blob/main/railway.toml)
+config:
+
+```toml
+[build]
+builder = "nixpacks"
+
+[build.dockerImage]
+image = "ghcr.io/mira-reviewer/mira:latest"
+
+[deploy]
+healthcheckPath = "/health"
+```
+
+Railway pulls the image, exposes a public URL, and points its health check at
+`/health`.
+
+## Set env vars
+
+In the Railway service's **Variables** tab, set:
+
+```
+MIRA_GITHUB_APP_ID=123456
+MIRA_GITHUB_PRIVATE_KEY=<paste full PEM, including BEGIN/END lines>
+MIRA_WEBHOOK_SECRET=<32+ bytes random>
+OPENROUTER_API_KEY=sk-or-v1-...
+MIRA_MODEL=anthropic/claude-sonnet-4-6
+ADMIN_PASSWORD=<change from default>
+MIRA_DASHBOARD_URL=<paste the public URL Railway gives you>
+```
+
+<Callout type="info">
+  Pasting a multi-line PEM into Railway's variable editor works — keep the
+  newlines. Don't escape them as `\n`.
+</Callout>
+
+## Add a database
+
+Click **+ New** → **Database** → **PostgreSQL** in the same project.
+Railway will inject a `DATABASE_URL` reference variable; bind it to your Mira
+service:
+
+```
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+```
+
+Mira picks this up automatically. Append `?sslmode=require` for production.
+
+If you'd rather use SQLite, skip the Postgres step and add a Railway volume
+mounted at `/data/indexes` instead.
+
+## Point the GitHub App at Railway
+
+Once deployed, copy the public URL Railway gives the service (something like
+`https://mira-production.up.railway.app`) and set the GitHub App's **Webhook
+URL** to:
+
+```
+https://mira-production.up.railway.app/github/webhook
+```
+
+Reinstall (or trigger a webhook redelivery from the GitHub App's Advanced
+settings) to confirm Mira is receiving events.
+
+## Verifying
+
+```bash
+curl https://mira-production.up.railway.app/health
+# → 200 OK
+```
+
+Open the public URL in a browser and log in with `admin` / `<ADMIN_PASSWORD>`.
+
+## Resource sizing
+
+Mira runs comfortably on Railway's smallest plan for small/medium repos. If
+you're indexing very large repos, bump the memory allocation — indexing is
+where Mira spikes RAM.

@@ -1,0 +1,128 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/css/neutral.css';
+@import 'fumadocs-ui/css/preset.css';
+
+/* Self-hosted variable Geist + Geist Mono via Fontsource — a single
+   `@font-face` per subset with `font-weight: 100 900` covering the whole
+   variable axis (no per-weight URL roundtrips, no Google Fonts split). */
+@import '@fontsource-variable/geist';
+@import '@fontsource-variable/geist-mono';
+
+/* Override Tailwind v4's default font tokens so every utility that resolves
+   to `font-sans` / `font-mono` (and Fumadocs UI's chrome) picks up Geist.
+   Note: the Fontsource family name is "Geist Variable" / "Geist Mono Variable"
+   for the variable build. */
+@theme {
+  --font-sans: 'Geist Variable', 'Geist', ui-sans-serif, system-ui, -apple-system,
+    BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, SFMono-Regular,
+    'SF Mono', Menlo, Monaco, Consolas, monospace;
+}
+
+html {
+  scrollbar-gutter: stable;
+  font-family: var(--font-sans);
+  /* Match Rewire's `antialiased` body class — gives Geist that clean,
+     slightly-thinner-stroke look on macOS / WebKit-based browsers. The
+     Firefox equivalent (`grayscale`) keeps weight rendering consistent
+     across platforms. */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
+}
+
+html > body[data-scroll-locked] {
+  margin-right: 0px !important;
+  --removed-body-scroll-bar-size: 0px !important;
+}
+
+/* ---------------------------------------------------------------------------
+   Sidebar — squared "Rewire-style" treatment
+   ---------------------------------------------------------------------------
+   Fumadocs UI's default sidebar items use rounded-lg corners and a 10%
+   primary-tinted active background with a 1px left accent stripe. Rewire's
+   docs use square edges, a stronger solid block on the active item, and no
+   accent stripe. The selectors below target the sidebar root (`#nd-sidebar`)
+   so they don't bleed into other rounded affordances like the search box. */
+#nd-sidebar a,
+#nd-sidebar button {
+  border-radius: 0;
+  /* Tighter vertical padding for compact rows. Default is `p-2` (8px
+     all-around); we just shave the top/bottom while leaving horizontal
+     padding from the inline-start depth offset alone. */
+  padding-block: 0.3rem;
+}
+
+/* Bolder section headers (SETUP, CONFIGURE, DEPLOY, REFERENCE). The
+   notebook layout renders separator nodes as a plain `<p>` with
+   `inline-flex items-center gap-2 mb-1.5 px-2 mt-6` — no font-weight or
+   uppercase styling. Rewire gives them a heavier all-caps feel; bump
+   weight, tighten letter-spacing, force uppercase, and use the regular
+   foreground color so they stand out from the muted page-tree links. */
+#nd-sidebar [data-radix-scroll-area-viewport] p {
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  color: var(--color-fd-foreground);
+}
+
+/* Solid block for the active item, no rounding, no left accent stripe. */
+#nd-sidebar [data-active='true'] {
+  background-color: var(--color-fd-accent);
+  color: var(--color-fd-accent-foreground);
+  border-radius: 0;
+}
+#nd-sidebar [data-active='true']::before {
+  display: none;
+}
+
+/* Notebook layout (`nav.mode: 'top'`) drops the sidebar's right border —
+   add it back so the chrome reads the same as Rewire's docs. */
+#nd-sidebar {
+  border-inline-end: 1px solid var(--color-fd-border);
+}
+
+/* Sidebar hugs the left viewport edge on wide screens.
+   Notebook layout's container grid is:
+     1fr | sidebar | main | toc | 1fr
+   with `pageCol = calc(var(--fd-layout-width, 97rem) - sidebar - toc)`.
+   Past 1552px wide, the leftmost `1fr` column absorbs the surplus and
+   pushes the sidebar inward. Setting `--fd-layout-width: 100vw` makes
+   the grid always sum to viewport width exactly, so both `1fr` margin
+   columns stay at 0 and the sidebar sits flush against the edge. */
+#nd-notebook-layout {
+  --fd-layout-width: 100vw;
+}
+
+/* The main article (`#nd-page`) is `flex flex-col` with `*:max-w-[900px]`
+   on its children. To float the prose block centered in its grid cell
+   on wide screens — without center-aligning each element's text the way
+   `align-items: center` would — cap the article itself at 900px and
+   margin-auto it. Children fill that block normally and read left-aligned. */
+#nd-page {
+  max-width: 900px;
+  margin-inline: auto;
+  width: 100%;
+}
+
+
+/* Tighter sidebar padding — pulls the header (logo) and the page-tree
+   viewport closer to the left edge, à la Rewire. By default Fumadocs
+   stacks `p-4` (16px) on the sidebar header AND on the viewport that
+   contains the page tree, so items sit ~24-32px in from the sidebar
+   edge. We trim both to ~8px. The !important is needed because
+   Tailwind's `p-4` utility on the viewport sets the physical-property
+   `padding-left/right` longhands, which can win the cascade depending
+   on serialization. We keep the vertical padding (top/bottom) alone. */
+#nd-sidebar [data-radix-scroll-area-viewport],
+#nd-sidebar > div > div:first-child {
+  padding-left: 0.5rem !important;
+  padding-right: 0.5rem !important;
+}
