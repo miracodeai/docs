@@ -10,8 +10,8 @@
     "postinstall": "fumadocs-mdx",
     "lint": "biome check",
     "format": "biome format --write",
-    "deploy": "npm run build && wrangler pages deploy ./build/client --project-name mira-docs",
-    "deploy:preview": "npm run build && wrangler pages deploy ./build/client --project-name mira-docs --branch preview"
+    "deploy": "npm run build && npx -y wrangler@latest pages deploy ./build/client --project-name mira-docs",
+    "deploy:preview": "npm run build && npx -y wrangler@latest pages deploy ./build/client --project-name mira-docs --branch preview"
   },
   "dependencies": {
     "@fontsource-variable/geist": "^5.2.8",
@@ -40,7 +40,6 @@
     "serve": "^14.2.6",
     "tailwindcss": "^4.2.4",
     "typescript": "^6.0.3",
-    "vite": "^8.0.10",
-    "wrangler": "^4.0.0"
+    "vite": "^8.0.10"
   }
 }
