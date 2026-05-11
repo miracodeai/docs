@@ -12,7 +12,7 @@ How Mira reviews PRs.
 
 - **Inline comments with severity and confidence** — every comment is tagged
   `blocker` / `warning` / `suggestion` / `nitpick` and carries a confidence
-  score. The `filter` block in `.mira.yml` controls which comments survive
+  score. The `filter` block in `.mira.yaml` controls which comments survive
   the noise filter.
 - **PR walkthrough / summary comment** — top-level comment with file coverage,
   per-severity counts, and (where useful) a Mermaid sequence diagram.
@@ -29,8 +29,8 @@ How Mira reviews PRs.
 - **Confidence clamping** — a `blocker` finding forces "Do not merge" overall,
   regardless of the LLM's initial overall read.
 
-Configure: [`.mira.yml` → `review`](/configuration/mira-yml#review),
-[`.mira.yml` → `filter`](/configuration/mira-yml#filter).
+Configure: [`.mira.yaml` → `review`](/configuration/mira-yml#review),
+[`.mira.yaml` → `filter`](/configuration/mira-yml#filter).
 
 ## Codebase intelligence
 
@@ -64,8 +64,23 @@ CVE alerting on every package in every repo.
 - **Dashboard widget** — org-wide open-vulnerabilities view, broken down by
   severity.
 
+![Org-wide vulnerabilities view — every open CVE across every indexed repo, with severity, advisory link, and known fix version.](/Vulnerabilities.png)
+
 Combined with the package index, this gives you incident response: "which
 repos use `lodash@4.17.20`?" → instant answer.
+
+## Org-wide package search
+
+Find every occurrence of a package or version across every repo.
+
+- **One query, every repo** — search by name, version, ecosystem, dev-vs-prod.
+- **Lockfile-aware dedupe** — when the same package appears in both a manifest
+  (`pyproject.toml`) and a lockfile (`uv.lock`), the lockfile row wins so the
+  resolved version is what you see.
+- **Incident-response shape** — answers "which repos use `lodash@4.17.20`
+  after this CVE?" in one query, no shell-script-grep across clones.
+
+![Org-wide package search — npm, pip, Docker, Go, and Cargo packages across every indexed repo, filterable by name, version, and ecosystem.](/Packages.png)
 
 ## Custom rules
 

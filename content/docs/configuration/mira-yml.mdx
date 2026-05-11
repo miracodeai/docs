@@ -1,10 +1,19 @@
 ---
-title: .mira.yml reference
-description: The full schema for the per-repo .mira.yml configuration file, with defaults and what each key controls.
+title: .mira.yaml reference
+description: The full schema for the optional per-repo .mira.yaml override file, with defaults and what each key controls.
 ---
 
-`.mira.yml` lives in the root of the repository being reviewed. Mira walks up
-the working tree looking for it; if it's missing, the defaults below apply.
+`.mira.yaml` lives at the **root of an individual repo** and overrides the
+deployment-wide [`mira.yaml`](/configuration/global-config) for *that one
+repo only*. It's optional — most repos don't need one, because the
+deployment-wide config covers them. Add `.mira.yaml` only when a repo
+genuinely needs different review behaviour (a noisy frontend that wants
+`confidence_threshold: 0.5`, a backend that wants `min_severity: "warning"`,
+etc.).
+
+If you'd rather not commit a config file, the same overrides can be edited
+from the **dashboard's per-repo settings page** — both produce the same
+effective config.
 
 The file has four top-level sections: `llm`, `filter`, `review`, and (rarely)
 `database`. Every key is optional — only set what you want to change.
@@ -12,7 +21,7 @@ The file has four top-level sections: `llm`, `filter`, `review`, and (rarely)
 ## Full example
 
 ```yaml
-# .mira.yml — every key is optional
+# .mira.yaml — every key is optional
 llm:
   model: "anthropic/claude-sonnet-4-6"
   fallback_model: "anthropic/claude-haiku-4-5"
@@ -111,7 +120,7 @@ Controls *how* Mira reviews — diff sizing, walkthrough behaviour, parallelism.
 
 ## `database`
 
-Almost nobody sets this in `.mira.yml` — `DATABASE_URL` and `ADMIN_PASSWORD`
+Almost nobody sets this in `.mira.yaml` — `DATABASE_URL` and `ADMIN_PASSWORD`
 env vars are the right knobs. Documented for completeness:
 
 | Key | Type | Default | Description |

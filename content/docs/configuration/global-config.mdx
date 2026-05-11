@@ -1,0 +1,104 @@
+---
+title: Deployment config (mira.yaml)
+description: The deployment-wide YAML loaded via `mira serve --config` — the main place Mira's review behaviour is configured.
+---
+
+The deployment-wide `mira.yaml` is the main place Mira is configured. Pass it
+to `mira serve` with `--config`, mount it into your Docker container, point
+the `MIRA_CONFIG` env var at it — whatever fits your infra. Every per-PR
+review starts from these defaults; per-repo overrides (in [`.mira.yaml`](/configuration/mira-yml)
+or the dashboard) only need to specify what's *different* for that repo.
+
+## Loading
+
+```bash
+# Local CLI
+mira serve --config /etc/mira/mira.yaml
+
+# Docker — mount the file and point the env var at it
+docker run -p 8000:8000 \
+  -v /etc/mira/mira.yaml:/app/mira.yaml:ro \
+  -e MIRA_CONFIG=/app/mira.yaml \
+  -e MIRA_GITHUB_APP_ID=123456 \
+  -e MIRA_GITHUB_PRIVATE_KEY="$(cat private-key.pem)" \
+  -e MIRA_WEBHOOK_SECRET=… \
+  -e OPENROUTER_API_KEY=sk-or-… \
+  ghcr.io/miracodeai/mira:latest
+```
+
+<Callout type="info">
+  Secrets stay in environment variables. `mira.yaml` is for *defaults* —
+  GitHub App ID, private key, webhook secret, OpenRouter key, database URL,
+  and admin password are all still env-var inputs. This is intentional:
+  most teams check `mira.yaml` into a git-managed config repo, and you don't
+  want secrets in there.
+</Callout>
+
+## Schema
+
+Same shape as [`.mira.yaml`](/configuration/mira-yml) — `llm`, `filter`,
+`review`, and `database` sections. Every key is optional; unspecified keys
+fall back to Mira's built-in defaults.
+
+```yaml
+# mira.yaml — deployment-wide defaults. Every key is optional.
+llm:
+  model: "anthropic/claude-sonnet-4-6"
+  fallback_model: "anthropic/claude-haiku-4-5"
+  indexing_model: "anthropic/claude-haiku-4-5"
+  review_model: "anthropic/claude-sonnet-4-6"
+  temperature: 0.2
+  max_tokens: 4096
+  max_context_tokens: 120000
+
+filter:
+  confidence_threshold: 0.7
+  max_comments: 5
+  min_severity: "nitpick"
+  exclude_deleted: true
+  max_files: 50
+
+review:
+  walkthrough: true
+  walkthrough_sequence_diagram: true
+  code_context: true
+  context_token_budget: 8000
+  max_concurrent_chunks: 5
+  self_critique: true
+  security_pass: true
+  agentic_tools: true
+  jit_java_go: true
+```
+
+For the full list of keys with descriptions and defaults, see the
+[`.mira.yaml` reference](/configuration/mira-yml) — it documents every field
+and applies identically here.
+
+## How it layers with per-repo overrides
+
+When Mira reviews a PR, it builds the effective config by merging:
+
+1. The deployment-wide `mira.yaml` (this file).
+2. Per-repo `.mira.yaml` *if* one exists in the repo, **OR** per-repo
+   settings the user set from the dashboard.
+3. Env vars (`MIRA_MODEL`, `DATABASE_URL`) as a final fallback when nothing
+   else specified the value.
+
+Right-most layer wins, deeply. Setting `filter.confidence_threshold: 0.5`
+in a repo's `.mira.yaml` overrides only that one key — every other setting
+inherits from `mira.yaml`. Most repos don't need a `.mira.yaml` at all.
+
+## Validation
+
+`mira serve --config …` validates the YAML eagerly at startup. A typo or a
+schema violation (e.g. `confidence_threshold: "high"`) fails the server
+boot rather than silently no-op'ing on the first PR review. The error
+message names the offending field.
+
+## Where to next
+
+<Cards>
+  <Card title=".mira.yaml reference" href="/configuration/mira-yml" description="The per-repo override schema — same fields, scoped to one repo." />
+  <Card title="Environment variables" href="/configuration/environment" description="What's still env-only (secrets) and what `mira.yaml` now covers." />
+  <Card title="Choosing a model" href="/configuration/models" description="OpenRouter, model splits, fallback chains." />
+</Cards>

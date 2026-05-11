@@ -1,43 +1,63 @@
 ---
 title: Configuration overview
-description: How Mira splits configuration between per-repo .mira.yml and per-deployment environment variables.
+description: How Mira layers a deployment-wide config file, optional per-repo .mira.yaml overrides, the admin Settings UI, and environment variables.
 ---
 
-Mira's configuration lives in two places. The split is intentional:
+Mira's configuration is layered. Highest priority wins.
 
-| Layer | File | Lifecycle | Holds |
+| Layer | File / surface | Lifecycle | Scope |
 | --- | --- | --- | --- |
-| Per-repo | [`.mira.yml`](/configuration/mira-yml) | Committed to the repo | Review behaviour: which model, what to filter, how to walk through |
-| Per-deployment | [Environment variables](/configuration/environment) | Set in your host (Docker, Fly, Railway, Render) | Secrets and infrastructure: GitHub App credentials, OpenRouter key, database URL |
+| Deployment-wide | [`mira.yaml` via `--config`](/configuration/global-config) | Mounted into the container at startup | Default LLM, filter, review settings for *every* repo this Mira instance reviews. **Full schema.** |
+| Admin UI overrides | Dashboard → **Settings → Review behaviour overrides** | Stored in Mira's database, editable without restart | Runtime tweaks to `filter` + `review` knobs only. **Model selection is intentionally not exposed here** — it lives in `mira.yaml` and the existing **Settings → Models** dropdown. |
+| Per-repo file | [`.mira.yaml`](/configuration/mira-yml) at the repo root, **optional** | Committed to the repo | Per-repo overrides — including `llm.model` if a single repo needs a different model. **Full schema.** |
+| Secrets & infra | [Environment variables](/configuration/environment) | Set in your host (Docker, Fly, Railway, Render) | GitHub App credentials, OpenRouter key, database URL, admin password |
 
-When Mira reviews a PR, it walks up from the PR's working tree looking for a
-`.mira.yml`. If it finds one, that file overrides the defaults. If it doesn't,
-Mira uses sensible defaults out of the box.
+Most teams point Mira at one `mira.yaml`, tune the noise filter from the
+admin Settings page, and never touch a per-repo `.mira.yaml`. Reach for
+`.mira.yaml` only when one repo needs to deviate from the rest of the org —
+typically a noisier or quieter `confidence_threshold`, occasionally a
+different model.
+
+## Why model selection isn't in the admin UI
+
+Model swaps have spend implications and are something you set deliberately
+once per deployment, not iterate on weekly. Two surfaces cover them:
+
+- **`mira.yaml`** — the canonical place for the deployment's default model
+  and fallback chain. Version-controllable.
+- **Dashboard → Settings → Models** — the existing dropdown for changing
+  the indexing and review models without rewriting `mira.yaml`. Persists
+  to the same DB the admin overrides use.
+
+If you genuinely need a different model on a single repo, set `llm.model`
+in that repo's `.mira.yaml`. There's no equivalent UI for it because the
+use case is rare enough that requiring a file commit is the right
+friction level.
 
 ## Decision tree
 
-- **Need to change *what* gets reviewed and how strict it is?** → put it in
-  [`.mira.yml`](/configuration/mira-yml).
-- **Need to change *which* LLM Mira uses?** → either set `MIRA_MODEL` env var
-  (deployment-wide default) or override per repo in `.mira.yml`.
-- **Need to set credentials, database URL, or admin password?** → environment
-  variables only — never put these in `.mira.yml` (it's committed).
+- **Setting up a new Mira deployment?** → write a [`mira.yaml`](/configuration/global-config) and pass it via `--config`.
+- **Tuning the noise filter or review behaviour?** → Dashboard → **Settings → Review behaviour overrides**. No restart required.
+- **One repo wants different review behaviour?** → commit a [`.mira.yaml`](/configuration/mira-yml) at its root.
+- **Switching models for the whole deployment?** → either edit `mira.yaml` and restart, or use **Settings → Models**.
+- **Need to set credentials, DB URL, or admin password?** → environment variables only — never commit secrets to YAML.
 
 ## Precedence
 
 For any given setting, Mira resolves in this order (highest priority first):
 
-1. CLI overrides passed via `--override key=value` (rare; see the CLI docs for
-   `mira review`).
-2. Per-repo `.mira.yml` value.
-3. Environment variable, if applicable (e.g. `MIRA_MODEL` overrides
-   `llm.model`, `DATABASE_URL` overrides `database.url`).
-4. Built-in defaults.
+1. CLI overrides passed via `--override key=value` (rare; see the CLI docs for `mira review`).
+2. Per-repo `.mira.yaml` in the repo's working tree.
+3. Admin UI overrides (DB-backed, `filter` + `review` only).
+4. Deployment-wide [`mira.yaml`](/configuration/global-config) loaded via `--config` at server startup.
+5. Environment variable fallbacks (`MIRA_MODEL`, `DATABASE_URL`).
+6. Built-in defaults.
 
 ## Where to next
 
 <Cards>
-  <Card title=".mira.yml schema" href="/configuration/mira-yml" description="Every key, default, and what it does." />
-  <Card title="Environment variables" href="/configuration/environment" description="The full env var table." />
+  <Card title="Deployment config (mira.yaml)" href="/configuration/global-config" description="The deployment-wide YAML. Most settings live here." />
+  <Card title=".mira.yaml schema" href="/configuration/mira-yml" description="Optional per-repo overrides — every key, every default." />
+  <Card title="Environment variables" href="/configuration/environment" description="What's still env-only (secrets and infra) and what's now optional." />
   <Card title="Choosing a model" href="/configuration/models" description="OpenRouter routing, indexing vs review models, fallback chains." />
 </Cards>

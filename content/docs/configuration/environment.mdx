@@ -3,9 +3,16 @@ title: Environment variables
 description: Every environment variable Mira reads, what it does, and which deployments need it.
 ---
 
-Environment variables are how you wire Mira into your infrastructure: GitHub
-App credentials, OpenRouter key, database URL. Anything that's a secret or a
-deployment detail belongs here, not in `.mira.yml`.
+Environment variables are how you wire Mira's **secrets** into your
+infrastructure: GitHub App credentials, OpenRouter key, database URL,
+admin password.
+
+Non-secret review behaviour (model defaults, filter thresholds, walkthrough
+toggles, etc.) now lives in the deployment-wide
+[`mira.yaml`](/configuration/global-config) — the env vars below are mostly
+for things you don't want in a checked-in YAML file. `MIRA_MODEL` and
+`DATABASE_URL` are kept as fallbacks for backwards compatibility, but
+`mira.yaml` is the recommended place for them.
 
 ## Required at minimum
 
@@ -35,7 +42,7 @@ These four must be set for `mira serve` to start:
 | --- | --- | --- |
 | `OPENROUTER_API_KEY` | — | **Required.** Your OpenRouter key. |
 | `OPENAI_API_KEY` | — | Accepted as a fallback for `OPENROUTER_API_KEY`. Don't set both. |
-| `MIRA_MODEL` | `anthropic/claude-sonnet-4-6` | Deployment-wide default model. Per-repo `.mira.yml` overrides this. See [Choosing a model](/configuration/models). |
+| `MIRA_MODEL` | `anthropic/claude-sonnet-4-6` | Deployment-wide default model. Per-repo `.mira.yaml` overrides this. See [Choosing a model](/configuration/models). |
 
 ## Database & storage
 

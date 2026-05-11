@@ -1,4 +1,8 @@
 export const appName = 'Mira';
+// Bump on each Mira release alongside `pyproject.toml` /
+// `src/mira/__init__.py` / `CHANGELOG.md`. Rendered as a chip next to the
+// docs logo and linked to /changelog.
+export const appVersion = '0.1.1';
 // `/` is the docs root — there is no marketing landing page. The empty
 // `baseUrl` makes Fumadocs render page URLs as `/quickstart`, `/security`,
 // etc. without a `/docs/` prefix.

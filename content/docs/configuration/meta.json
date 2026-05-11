@@ -1,4 +1,4 @@
 {
   "title": "Configuration",
-  "pages": ["index", "mira-yml", "environment", "models"]
+  "pages": ["index", "global-config", "mira-yml", "environment", "models"]
 }

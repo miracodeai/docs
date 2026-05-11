@@ -19,7 +19,7 @@ markup.
 ## How `MIRA_MODEL` resolves
 
 ```
-.mira.yml llm.model        ← per-repo override (highest priority)
+.mira.yaml llm.model        ← per-repo override (highest priority)
    └── env MIRA_MODEL      ← deployment-wide default
        └── built-in        ← anthropic/claude-sonnet-4-6
 ```
@@ -43,7 +43,7 @@ Set it once via env var:
 export MIRA_MODEL=anthropic/claude-sonnet-4-6
 ```
 
-…or per repo in `.mira.yml`:
+…or per repo in `.mira.yaml`:
 
 ```yaml
 llm:
@@ -93,7 +93,7 @@ registry lives at [`src/mira/llm/models.json`](https://github.com/miracodeai/mir
 | `google/gemini-2.5-flash` | Google | 1M | 65k | ✅ | — |
 | `google/gemini-2.5-pro` | Google | 1M | 65k | — | ✅ |
 
-To use a model that isn't on this list, set it directly in `.mira.yml` — Mira
+To use a model that isn't on this list, set it directly in `.mira.yaml` — Mira
 will pass the string through to OpenRouter. You won't get the dashboard's
 pricing display or the "Recommended" badge for unrecognised models, but
 review/index will work.
