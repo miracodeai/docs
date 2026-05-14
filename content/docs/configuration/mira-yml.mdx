@@ -30,6 +30,11 @@ llm:
   temperature: 0.2
   max_tokens: 4096
   max_context_tokens: 120000
+  # Point at any OpenAI-compatible endpoint — vLLM, Ollama, LiteLLM proxy,
+  # LocalAI, llama.cpp, Together, Fireworks, Groq, etc.
+  # Defaults to OpenRouter.
+  base_url: "https://openrouter.ai/api/v1"
+  api_key_env: "OPENROUTER_API_KEY"
 
 filter:
   confidence_threshold: 0.7
@@ -75,6 +80,50 @@ Controls which model is used and how it's invoked.
 | `temperature` | float | `0.2` | Sampling temperature. Reviews are mostly deterministic; raising this is rarely useful. |
 | `max_tokens` | int | `4096` | Cap on output tokens per LLM call. |
 | `max_context_tokens` | int | `120000` | How many input tokens Mira is willing to spend per call. Trims context to fit. |
+| `base_url` | string | `https://openrouter.ai/api/v1` | The OpenAI-compatible chat-completions endpoint Mira sends requests to. Override for self-hosted models or alternative providers. See [Custom endpoints](#custom-endpoints) below. |
+| `api_key_env` | string | `OPENROUTER_API_KEY` | Name of the environment variable Mira reads the API key from. Set to `""` (empty string) for local endpoints that need no auth. |
+
+### Custom endpoints
+
+Any OpenAI-compatible chat-completions API works — point `llm.base_url` at the
+right URL and set `llm.api_key_env` to the env var holding the key. Mira
+auto-detects OpenRouter and skips ranking headers (`HTTP-Referer`, `X-Title`)
+for any other endpoint.
+
+**Ollama** (local, no auth):
+
+```yaml
+llm:
+  base_url: "http://localhost:11434/v1"
+  api_key_env: ""
+  model: "llama3.1:70b"
+```
+
+**vLLM** (your own GPU server):
+
+```yaml
+llm:
+  base_url: "http://vllm.internal:8000/v1"
+  api_key_env: "VLLM_API_KEY"
+  model: "meta-llama/Meta-Llama-3.1-70B-Instruct"
+```
+
+**LiteLLM proxy** (route to many providers under one URL):
+
+```yaml
+llm:
+  base_url: "http://litellm:4000/v1"
+  api_key_env: "LITELLM_MASTER_KEY"
+  model: "claude-sonnet-4-6"
+```
+
+**Together / Fireworks / Groq / Cerebras / Anyscale / LocalAI** — same shape;
+set `base_url` to the provider's `/v1` endpoint and `api_key_env` to the env
+var holding your key.
+
+> Reviews require the model to support **tool/function calling**. Most hosted
+> providers support it; for self-hosted models pick one with structured-output
+> support (Llama 3.1, Mixtral 8x22B, Qwen 2.5, DeepSeek V3, etc.).
 
 ## `filter`
 
