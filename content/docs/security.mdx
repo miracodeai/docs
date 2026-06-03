@@ -23,9 +23,9 @@ We commit to:
 - Crediting you in the advisory and CHANGELOG (unless you prefer to remain
   anonymous).
 
-We're a small open-source project and do not currently offer a paid bug
-bounty. Reporters are credited in the advisory and CHANGELOG. We deeply
-appreciate responsible disclosure regardless.
+We're a small open-source project and don't currently offer a paid bug
+bounty, but we credit every reporter (as noted above) and deeply appreciate
+responsible disclosure regardless.
 
 ### Vulnerability categories
 
@@ -37,31 +37,31 @@ appreciate responsible disclosure regardless.
 
 ### Known non-issues
 
-- Misconfigurations on setup are **explicitly out of scope** — for example,
+- Misconfigurations on setup are **explicitly out of scope**. For example,
   not setting `MIRA_WEBHOOK_SECRET`, leaving `ADMIN_PASSWORD` at the default,
   or exposing the dashboard publicly without auth.
 - Vulnerabilities in third-party dependencies that don't affect Mira's actual
-  usage — please report those upstream.
+  usage. Please report those upstream.
 - Issues requiring physical access to the host running Mira.
 
 ## Self-hosted posture
 
-When you self-host Mira, the following is true by construction:
+When you self-host Mira, the following holds by design:
 
-- **No data or telemetry leaves your infrastructure.** No phone-home, no
-  usage tracking, no analytics service.
+- **No data or telemetry leaves your infrastructure.** Nothing phones home,
+  and there's no usage tracking or analytics service.
 - **Code never touches a Mira-controlled server.** Your code goes from your
   repo, through the LLM API key you provided, and back to your Mira instance.
-  We are not in the path.
-- **Indexes are stored locally** in your SQLite file or your Postgres
+  We're not in the path.
+- **Indexes are stored locally**, in your SQLite file or your Postgres
   database. There is no central index store.
-- **Webhook signatures verified** with HMAC-SHA256 against
-  `MIRA_WEBHOOK_SECRET`. Invalid signatures rejected at the edge.
-- **GitHub App tokens cached in-process only**, with a 55-minute TTL, and
+- **Webhook signatures are verified** with HMAC-SHA256 against
+  `MIRA_WEBHOOK_SECRET`, and invalid signatures are rejected at the edge.
+- **GitHub App tokens are cached in-process only**, with a 55-minute TTL, and
   never written to disk. Tokens for installations you've removed expire
   automatically.
-- **No license keys, no paywalls, no phone-home licensing.** Fully open
-  source under Apache 2.0.
+- **No license keys and no paywalls.** Mira is fully open source under Apache
+  2.0.
 
 ## Hardening checklist
 
@@ -76,7 +76,7 @@ Before pointing real PRs at a Mira deployment, work through this list.
    dashboard is open if it's network-reachable.
 3. **TLS in front of Mira.** The image does not terminate TLS. See
    [TLS examples](/deployment/docker#tls) for Caddy, nginx + Let's Encrypt,
-   and Cloudflare Tunnel configs — or use a PaaS that handles TLS for you
+   and Cloudflare Tunnel configs, or use a PaaS that handles TLS for you
    (Railway, Fly, Render).
 4. **Restrict ingress to `/github/webhook`** to GitHub's published webhook
    IPs, or front the service with a reverse proxy that does. The rest of the
@@ -103,17 +103,17 @@ below are what the Mira project maintains on this repository:
    actually needed. A malicious dependency in CI can't push commits.
 4. **Outside-collaborator workflow approval.** PRs from non-collaborators
    require a maintainer to click "Approve and run" before any workflow
-   executes — secrets stay unreachable until then.
+   executes, so secrets stay unreachable until then.
 5. **Eval secrets gated by environment approval.** `OPENROUTER_API_KEY`
    lives in the `production` GitHub environment with required reviewers,
    so even an authorised workflow run can't reach the key without explicit
    approval.
-6. **Dependabot enabled** for `github-actions`, `pip`, and `npm` — weekly
+6. **Dependabot enabled** for `github-actions`, `pip`, and `npm`, with weekly
    pinned-SHA bump PRs.
 7. **Signed release tags** (`git tag -s v0.1.0`). An attacker who steals
    a session can't push a fake release tag without the signing key.
-8. **Trusted Publishers** for any future PyPI publication — no long-lived
-   API token to steal; OIDC-bound to this repo.
+8. **Trusted Publishers** for any future PyPI publication: no long-lived
+   API token to steal, OIDC-bound to this repo.
 9. **Container signing via cosign** (sigstore keyless) on every Docker image
    release. Verify before deploying:
    ```bash

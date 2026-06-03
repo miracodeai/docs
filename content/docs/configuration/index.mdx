@@ -8,13 +8,13 @@ Mira's configuration is layered. Highest priority wins.
 | Layer | File / surface | Lifecycle | Scope |
 | --- | --- | --- | --- |
 | Deployment-wide | [`mira.yaml` via `--config`](/configuration/global-config) | Mounted into the container at startup | Default LLM, filter, review settings for *every* repo this Mira instance reviews. **Full schema.** |
-| Admin UI overrides | Dashboard → **Settings → Review behaviour overrides** | Stored in Mira's database, editable without restart | Runtime tweaks to `filter` + `review` knobs only. **Model selection is intentionally not exposed here** — it lives in `mira.yaml` and the existing **Settings → Models** dropdown. |
-| Per-repo file | [`.mira.yaml`](/configuration/mira-yml) at the repo root, **optional** | Committed to the repo | Per-repo overrides — including `llm.model` if a single repo needs a different model. **Same schema as `mira.yaml`.** |
+| Admin UI overrides | Dashboard → **Settings → Review behaviour overrides** | Stored in Mira's database, editable without restart | Runtime tweaks to `filter` + `review` knobs only. **Model selection is intentionally not exposed here.** It lives in `mira.yaml` and the existing **Settings → Models** dropdown. |
+| Per-repo file | [`.mira.yaml`](/configuration/mira-yml) at the repo root, **optional** | Committed to the repo | Per-repo overrides, including `llm.model` if a single repo needs a different model. **Same schema as `mira.yaml`.** |
 | Secrets & infra | [Environment variables](/configuration/environment) | Set in your host (Docker, Fly, Railway, Render) | GitHub App credentials, OpenRouter key, database URL, admin password |
 
 Most teams point Mira at one `mira.yaml`, tune the noise filter from the
 admin Settings page, and never touch a per-repo `.mira.yaml`. Reach for
-`.mira.yaml` only when one repo needs to deviate from the rest of the org —
+`.mira.yaml` only when one repo needs to deviate from the rest of the org,
 typically a noisier or quieter `confidence_threshold`, occasionally a
 different model.
 
@@ -23,9 +23,9 @@ different model.
 Model swaps have spend implications and are something you set deliberately
 once per deployment, not iterate on weekly. Two surfaces cover them:
 
-- **`mira.yaml`** — the canonical place for the deployment's default model
+- **`mira.yaml`**: the canonical place for the deployment's default model
   and fallback chain. Version-controllable.
-- **Dashboard → Settings → Models** — the existing dropdown for changing
+- **Dashboard → Settings → Models**: the existing dropdown for changing
   the indexing and review models without rewriting `mira.yaml`. Persists
   to the same DB the admin overrides use.
 
@@ -40,7 +40,7 @@ friction level.
 - **Tuning the noise filter or review behaviour?** → Dashboard → **Settings → Review behaviour overrides**. No restart required.
 - **One repo wants different review behaviour?** → commit a [`.mira.yaml`](/configuration/mira-yml) at its root.
 - **Switching models for the whole deployment?** → either edit `mira.yaml` and restart, or use **Settings → Models**.
-- **Need to set credentials, DB URL, or admin password?** → environment variables only — never commit secrets to YAML.
+- **Need to set credentials, DB URL, or admin password?** → environment variables only; never commit secrets to YAML.
 
 ## Precedence
 
@@ -56,8 +56,8 @@ For any given setting, Mira resolves in this order (highest priority first):
 ## Where to next
 
 <Cards>
-  <Card title="Deployment config (mira.yaml)" href="/configuration/global-config" description="The canonical schema reference — every key, default, and description." />
-  <Card title=".mira.yaml overrides" href="/configuration/mira-yml" description="Optional per-repo overrides — same schema, scoped to one repo." />
+  <Card title="Deployment config (mira.yaml)" href="/configuration/global-config" description="The canonical schema reference: every key, default, and description." />
+  <Card title=".mira.yaml overrides" href="/configuration/mira-yml" description="Optional per-repo overrides, same schema, scoped to one repo." />
   <Card title="Environment variables" href="/configuration/environment" description="What's still env-only (secrets and infra) and what's now optional." />
   <Card title="Choosing a model" href="/configuration/models" description="OpenRouter routing, indexing vs review models, fallback chains." />
 </Cards>

@@ -46,7 +46,7 @@ fly launch --copy-config --no-deploy
 ```
 
 Pick a region close to GitHub's webhook delivery (or close to your
-contributors). Don't deploy yet — secrets first.
+contributors). Don't deploy yet; secrets first.
 
 ## Set secrets
 
@@ -61,7 +61,7 @@ fly secrets set \
   MIRA_DASHBOARD_URL=https://your-app.fly.dev
 ```
 
-Fly stores these encrypted at rest and injects them at runtime — they don't
+Fly stores these encrypted at rest and injects them at runtime; they don't
 appear in `fly.toml` and aren't checked into git.
 
 ## Add Postgres
@@ -71,8 +71,8 @@ fly postgres create --name mira-db
 fly postgres attach mira-db --app your-app
 ```
 
-`fly postgres attach` writes a `DATABASE_URL` secret into your app. That's it
-— Mira will pick it up.
+`fly postgres attach` writes a `DATABASE_URL` secret into your app. That's it;
+Mira will pick it up.
 
 ## Persistent volume (if you stay on SQLite)
 

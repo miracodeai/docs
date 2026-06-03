@@ -9,7 +9,7 @@ admin password.
 
 Non-secret review behaviour (model defaults, filter thresholds, walkthrough
 toggles, etc.) now lives in the deployment-wide
-[`mira.yaml`](/configuration/global-config) — the env vars below are mostly
+[`mira.yaml`](/configuration/global-config). The env vars below are mostly
 for things you don't want in a checked-in YAML file. `MIRA_MODEL` and
 `DATABASE_URL` are kept as fallbacks for backwards compatibility, but
 `mira.yaml` is the recommended place for them.
@@ -67,7 +67,7 @@ These four must be set for `mira serve` to start:
 
 ## Tuning the learning loop
 
-These are advanced tuning knobs — defaults are fine for almost everyone. They
+These are advanced tuning knobs; defaults are fine for almost everyone. They
 control when Mira synthesizes a new rule from feedback signals.
 
 | Variable | Default | Description |

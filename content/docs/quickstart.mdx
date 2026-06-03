@@ -4,12 +4,13 @@ description: Deploy Mira, install it on a repository, and watch it review your f
 ---
 
 This guide takes you from zero to a Mira review on a real PR in about ten
-minutes. Pick a deployment target, install the GitHub App, then open a PR.
+minutes. You'll pick a deployment target, install the GitHub App, and then
+open a PR.
 
 ## 1. Get an OpenRouter API key
 
-Mira talks to OpenRouter under the hood — one key works across Anthropic,
-OpenAI, Google, DeepSeek, and more.
+Mira talks to OpenRouter under the hood, so a single key works across
+Anthropic, OpenAI, Google, DeepSeek, and more.
 
 1. Sign up at [openrouter.ai](https://openrouter.ai).
 2. Generate a key. The free tier is enough to test Mira on a few PRs.
@@ -26,14 +27,14 @@ Mira runs as a GitHub App that auto-reviews every PR.
 
 At [github.com/settings/apps/new](https://github.com/settings/apps/new):
 
-- **Webhook URL** — `https://your-server.com/github/webhook` (you'll fill this
+- **Webhook URL**: `https://your-server.com/github/webhook` (you'll fill this
   in once you've deployed in step 3; you can come back and edit it).
-- **Webhook secret** — generate any 32+ byte random string and save it as
+- **Webhook secret**: generate any 32+ byte random string and save it as
   `MIRA_WEBHOOK_SECRET`.
-- **Permissions** — Pull Requests (read & write), Contents (read), Issues
+- **Permissions**: Pull Requests (read & write), Contents (read), Issues
   (read & write), Metadata (read).
-- **Events** — Pull request, Issue comment, Push, Installation.
-- **Private key** — generate a `.pem` and download it.
+- **Events**: Pull request, Issue comment, Push, Installation.
+- **Private key**: generate a `.pem` and download it.
 
 Note your **App ID** (numeric, top of the app settings page).
 
@@ -72,8 +73,8 @@ Pick the path that fits your stack. Each deploys the same `ghcr.io/miracodeai/mi
   </Tab>
 </Tabs>
 
-Once the service is running, hit `https://your-server.com/health` — you should
-get a `200`.
+Once the service is running, hit `https://your-server.com/health` and you
+should get a `200`.
 
 ## 4. Point the GitHub App at your deployment
 
@@ -95,7 +96,7 @@ Mira will:
 3. Stream a walkthrough comment within ~10 seconds.
 4. Post inline comments within a minute.
 
-If anything looks off, tail the server logs — Mira prints a structured event
+If anything looks off, tail the server logs. Mira prints a structured event
 for every webhook it receives.
 
 ## What's next

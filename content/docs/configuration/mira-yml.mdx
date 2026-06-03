@@ -5,7 +5,7 @@ description: The optional per-repo .mira.yaml file overrides the deployment-wide
 
 Drop a `.mira.yaml` at the root of a repo to override the deployment-wide
 [`mira.yaml`](/configuration/global-config) for that one repo. It's
-optional — reach for it only when a repo needs different review behaviour
+optional; reach for it only when a repo needs different review behaviour
 (a noisy frontend wanting `confidence_threshold: 0.85`, a backend wanting
 `min_severity: "warning"`, etc.). Most repos don't need one.
 
@@ -14,18 +14,18 @@ overrides without committing a file.
 
 ## Schema
 
-Same as [`mira.yaml`](/configuration/global-config) — `llm`, `filter`,
+Same as [`mira.yaml`](/configuration/global-config): `llm`, `filter`,
 `review`, every key optional. The
 [deployment-config reference](/configuration/global-config) documents every
 key; anything there is overridable here.
 
-DB connection and dashboard auth have no per-repo equivalent — they're set
+DB connection and dashboard auth have no per-repo equivalent; they're set
 deployment-wide via `DATABASE_URL` / `ADMIN_PASSWORD`
 [env vars](/configuration/environment).
 
 ## Typical examples
 
-Real `.mira.yaml` files are short — just the keys that differ.
+Real `.mira.yaml` files are short, just the keys that differ.
 
 A noisy frontend wanting stricter filtering and extra exclude patterns:
 

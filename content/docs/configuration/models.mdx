@@ -3,17 +3,26 @@ title: Choosing a model
 description: How OpenRouter routing works, when to split indexing and review models, and which models Mira recognizes.
 ---
 
-Mira talks to LLMs through [OpenRouter](https://openrouter.ai), so any model
-OpenRouter supports works. One `OPENROUTER_API_KEY` covers Anthropic, OpenAI,
-Google, DeepSeek, and others — you pay your provider directly with no Mira
-markup.
+Mira can reach an LLM three ways:
+
+- **[OpenRouter](https://openrouter.ai)** (default) — one `OPENROUTER_API_KEY`
+  covers Anthropic, OpenAI, Google, DeepSeek, and others. You pay your provider
+  directly with no Mira markup.
+- **Any OpenAI-compatible endpoint** — point `llm.base_url` at a self-hosted or
+  alternative server: **Ollama**, **vLLM**, **LiteLLM proxy**, **LocalAI**,
+  **llama.cpp**, **Together**, **Fireworks**, **Groq**, **Cerebras**, etc. See
+  [Custom endpoints](/configuration/global-config#custom-endpoints).
+- **[AWS Bedrock](#aws-bedrock)** — `llm.provider: "bedrock"` talks to Bedrock's
+  Converse API directly, using the standard AWS credential chain. Good for teams
+  with data-residency rules or existing AWS billing.
+
+The rest of this page uses OpenRouter-style `provider/model` strings, but the
+[indexing/review split](#splitting-indexing-and-review) and
+[fallback chain](#fallback-chain) work the same whichever backend you pick.
 
 <Callout type="info">
-  **Coming soon: direct provider backends.** Native adapters for **Anthropic**,
-  **OpenAI**, **Google Vertex**, **Ollama**, and **vLLM** are on the roadmap
-  alongside OpenRouter — for teams that already hold provider keys, run
-  open-weights models in-house, or have data-residency rules that prevent
-  traffic from flowing through OpenRouter.
+  **On the roadmap:** native first-party adapters for **Anthropic**, **OpenAI**,
+  and **Google Vertex** (direct, without going through OpenRouter).
 </Callout>
 
 ## How `MIRA_MODEL` resolves
@@ -52,8 +61,8 @@ llm:
 
 ## Splitting indexing and review
 
-Indexing reads every file in your repo to build summaries — it benefits from a
-cheap, fast model. Review reasons over diffs and project context — it benefits
+Indexing reads every file in your repo to build summaries, so it benefits from a
+cheap, fast model. Review reasons over diffs and project context, so it benefits
 from a stronger model. You can split them:
 
 ```yaml
@@ -77,10 +86,43 @@ llm:
 
 The fallback applies to both indexing and review.
 
+## AWS Bedrock
+
+To run reviews against models on **Amazon Bedrock** instead of an
+OpenAI-compatible endpoint, set `llm.provider: "bedrock"`. Mira talks to Bedrock
+through the [Converse API](https://docs.aws.amazon.com/bedrock/latest/userguide/conversation-inference.html);
+`model` and `fallback_model` are Bedrock model IDs rather than OpenRouter
+`provider/model` strings.
+
+```yaml
+llm:
+  provider: "bedrock"
+  model: "us.anthropic.claude-sonnet-4-6-v1:0"
+  fallback_model: "us.anthropic.claude-haiku-4-5-v1:0"
+  region: "us-east-1"
+  # aws_profile: "my-profile"   # optional — see auth below
+```
+
+**Authentication** uses the standard AWS credential chain — no Mira-specific
+keys. Mira picks up whatever boto3 finds: environment variables
+(`AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_SESSION_TOKEN`), an EC2
+instance profile, an ECS task role, or SSO. Set `aws_profile` to pin a named
+profile from `~/.aws/credentials`; omit it to use the default chain.
+
+`indexing_model` / `review_model` splitting and the `fallback_model` chain work
+the same as with OpenRouter. The model must be enabled in your account for the
+configured `region`, and you'll need the `boto3` dependency available in the
+runtime.
+
+<Callout type="warn">
+  Bedrock models aren't in Mira's dashboard registry, so they won't show pricing
+  or a "Recommended" badge — but review and indexing work normally.
+</Callout>
+
 ## Recognised models
 
-Only models in Mira's registry can be selected from the dashboard — this is to
-keep the per-purpose recommendations and pricing display accurate. The current
+Only models in Mira's registry can be selected from the dashboard. That keeps
+the per-purpose recommendations and the pricing display accurate. The current
 registry lives at [`src/mira/llm/models.json`](https://github.com/miracodeai/mira/blob/main/src/mira/llm/models.json).
 
 | Model | Provider | Input ctx | Output | Indexing | Review |
@@ -93,7 +135,7 @@ registry lives at [`src/mira/llm/models.json`](https://github.com/miracodeai/mir
 | `google/gemini-2.5-flash` | Google | 1M | 65k | ✅ | — |
 | `google/gemini-2.5-pro` | Google | 1M | 65k | — | ✅ |
 
-To use a model that isn't on this list, set it directly in `.mira.yaml` — Mira
+To use a model that isn't on this list, set it directly in `.mira.yaml` and Mira
 will pass the string through to OpenRouter. You won't get the dashboard's
 pricing display or the "Recommended" badge for unrecognised models, but
 review/index will work.

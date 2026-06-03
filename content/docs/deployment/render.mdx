@@ -4,7 +4,7 @@ description: Use the included render.yaml blueprint to deploy Mira on Render.
 ---
 
 Render's blueprint deploys read [`render.yaml`](https://github.com/miracodeai/mira/blob/main/render.yaml)
-straight from the Mira repo — point Render at the repo, paste in your secrets,
+straight from the Mira repo. Point Render at the repo, paste in your secrets,
 and Render handles the rest.
 
 ## render.yaml
@@ -30,7 +30,7 @@ services:
         sync: false
 ```
 
-The `sync: false` lines are important — they tell Render *not* to commit the
+The `sync: false` lines are important: they tell Render *not* to commit the
 values back to git. You'll set them in the Render dashboard.
 
 ## Deploy steps
@@ -61,7 +61,7 @@ MIRA_DASHBOARD_URL=https://your-service.onrender.com
 ## Add a database
 
 In the Render dashboard, **New +** → **PostgreSQL**, create a managed Postgres
-instance in the same region. Render gives you an internal `DATABASE_URL` —
+instance in the same region. Render gives you an internal `DATABASE_URL`;
 copy it into the Mira service's environment. Append `?sslmode=require` for
 production.
 

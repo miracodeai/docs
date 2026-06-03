@@ -1,14 +1,14 @@
 ---
 title: Deployment config (mira.yaml)
-description: The deployment-wide YAML loaded via `mira serve --config` — the main place Mira is configured, and the canonical schema reference for every llm / filter / review key.
+description: The deployment-wide YAML loaded via `mira serve --config`. The main place Mira is configured, and the canonical schema reference for every llm / filter / review key.
 ---
 
-`mira.yaml` is where you configure Mira. One file, three sections —
-`llm`, `filter`, `review` — and every key is optional. Whatever you set
+`mira.yaml` is where you configure Mira. One file, three sections
+(`llm`, `filter`, `review`), and every key is optional. Whatever you set
 here applies to every PR Mira reviews, unless a repo overrides it in
 [`.mira.yaml`](/configuration/mira-yml) or the dashboard.
 
-This page is the canonical reference for those three sections — every
+This page is the canonical reference for those three sections: every
 key, default, and what it does.
 
 ## Loading
@@ -29,7 +29,7 @@ docker run -p 8000:8000 \
 ```
 
 <Callout type="info">
-  Secrets stay in environment variables. `mira.yaml` is for *defaults* —
+  Secrets stay in environment variables. `mira.yaml` is for *defaults*:
   GitHub App ID, private key, webhook secret, OpenRouter key, database URL,
   and admin password are all still env-var inputs. This is intentional:
   most teams check `mira.yaml` into a git-managed config repo, and you don't
@@ -96,8 +96,8 @@ Controls which model is used and how it's invoked.
 | --- | --- | --- | --- |
 | `model` | string | `anthropic/claude-sonnet-4-6` | Default model for both indexing and review unless overridden. Any [recognised model](/configuration/models). |
 | `fallback_model` | string | *unset* | If the primary model errors, retry with this one. |
-| `indexing_model` | string | *uses `model`* | Override just for the indexing pass — usually a cheaper/faster model. |
-| `review_model` | string | *uses `model`* | Override just for the review pass — usually a stronger model. |
+| `indexing_model` | string | *uses `model`* | Override just for the indexing pass, usually a cheaper/faster model. |
+| `review_model` | string | *uses `model`* | Override just for the review pass, usually a stronger model. |
 | `temperature` | float | `0.2` | Sampling temperature. Reviews are mostly deterministic; raising this is rarely useful. |
 | `max_tokens` | int | `4096` | Cap on output tokens per LLM call. |
 | `max_context_tokens` | int | `120000` | How many input tokens Mira is willing to spend per call. Trims context to fit. |
@@ -106,7 +106,7 @@ Controls which model is used and how it's invoked.
 
 ### Custom endpoints
 
-Any OpenAI-compatible chat-completions API works — point `llm.base_url` at the
+Any OpenAI-compatible chat-completions API works. Point `llm.base_url` at the
 right URL and set `llm.api_key_env` to the env var holding the key. Mira
 auto-detects OpenRouter and skips ranking headers (`HTTP-Referer`, `X-Title`)
 for any other endpoint.
@@ -138,8 +138,8 @@ llm:
   model: "claude-sonnet-4-6"
 ```
 
-**Together / Fireworks / Groq / Cerebras / Anyscale / LocalAI** — same shape;
-set `base_url` to the provider's `/v1` endpoint and `api_key_env` to the env
+**Together / Fireworks / Groq / Cerebras / Anyscale / LocalAI** use the same
+shape; set `base_url` to the provider's `/v1` endpoint and `api_key_env` to the env
 var holding your key.
 
 > Reviews require the model to support **tool/function calling**. Most hosted
@@ -148,7 +148,7 @@ var holding your key.
 
 ## `filter`
 
-Controls which comments get posted. Mira filters aggressively by default — the
+Controls which comments get posted. Mira filters aggressively by default; the
 goal is "every comment is one you'd want to land."
 
 | Key | Type | Default | Description |
@@ -157,7 +157,7 @@ goal is "every comment is one you'd want to land."
 | `max_comments` | int | `5` | Hard cap on inline comments per PR. The most severe + most confident `N` are kept. |
 | `min_severity` | string | `nitpick` | Drop comments below this severity. Levels: `nitpick`, `suggestion`, `warning`, `blocker`. |
 | `exclude_patterns` | string[] | lockfiles, minified, images, fonts, archives | Glob patterns of files Mira should never review. |
-| `exclude_deleted` | bool | `true` | Skip files removed by the diff — they aren't there to comment on. |
+| `exclude_deleted` | bool | `true` | Skip files removed by the diff; they aren't there to comment on. |
 | `max_files` | int | `50` | Cap on files reviewed in a single PR. PRs above this are partially reviewed; the skipped files appear in the walkthrough. |
 
 <Callout type="info">
@@ -168,23 +168,23 @@ goal is "every comment is one you'd want to land."
 
 ## `review`
 
-Controls *how* Mira reviews — diff sizing, walkthrough behaviour, parallelism.
+Controls *how* Mira reviews: diff sizing, walkthrough behaviour, parallelism.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `context_lines` | int | `3` | Lines of unchanged code shown around each hunk. |
-| `max_diff_size` | int | `250000` | Total diff size budget (chars). Above this, Mira ranks files by priority and skips lowest-priority ones to fit. Skipped files are listed in the walkthrough — invoke `@miracodeai review-rest` to review them. |
+| `max_diff_size` | int | `250000` | Total diff size budget (chars). Above this, Mira ranks files by priority and skips lowest-priority ones to fit. Skipped files are listed in the walkthrough; invoke `@miracodeai review-rest` to review them. |
 | `max_file_size` | int | `50000` | A single file larger than this is skipped before chunking starts (lockfiles, generated SDKs). |
 | `max_chunks_per_review` | int (1–20) | `5` | Hard ceiling on chunks reviewed in one pass. Above this, the top-priority N run; the rest are listed as skipped. |
 | `include_summary` | bool | `true` | Post a top-level summary comment in addition to inline comments. |
-| `focus_only_on_problems` | bool | `false` | If `true`, only flag bugs / blockers — no improvement suggestions. |
+| `focus_only_on_problems` | bool | `false` | If `true`, only flag bugs / blockers, with no improvement suggestions. |
 | `walkthrough` | bool | `true` | Generate a top-level walkthrough comment with file coverage and per-severity stats. |
 | `walkthrough_sequence_diagram` | bool | `true` | Include a Mermaid sequence diagram in the walkthrough where it adds value. |
 | `code_context` | bool | `true` | Pull related symbols / files from the index to give the LLM project context, not just diff context. |
 | `context_token_budget` | int | `8000` | How many tokens of indexed context Mira may add per review. |
 | `max_concurrent_chunks` | int (1–20) | `5` | Parallelism for chunk reviews. Raise if your LLM provider can handle it. |
 | `self_critique` | bool | `true` | Second-pass LLM critique on each draft comment; failed ones are dropped. Disable for faster reviews. |
-| `security_pass` | bool | `true` | Dedicated security review pass (XSS, injection, auth bypass, CSRF, SSRF, deserialization, crypto) in parallel with the main review. Runs on the *indexing* tier model — bump `llm.indexing_model` if you want the heavy model here too. |
+| `security_pass` | bool | `true` | Dedicated security review pass (XSS, injection, auth bypass, CSRF, SSRF, deserialization, crypto) in parallel with the main review. Runs on the *indexing* tier model; bump `llm.indexing_model` if you want the heavy model here too. |
 | `agentic_tools` | bool | `true` | On unindexed repos, give the reviewer LLM `read_file` / `grep_repo` tools for cross-file context. No effect on indexed repos. |
 | `jit_java_go` | bool | `true` | JIT cross-file resolver attempts Java + Go imports. Heuristic for those languages; toggle off to A/B test impact. |
 
@@ -192,7 +192,7 @@ Controls *how* Mira reviews — diff sizing, walkthrough behaviour, parallelism.
 
 For each PR, Mira merges layers in this order (later wins):
 
-1. `mira.yaml` — this file.
+1. `mira.yaml`, this file.
 2. `.mira.yaml` in the repo, **or** the repo's dashboard settings.
 3. Env-var fallbacks (`MIRA_MODEL`, `DATABASE_URL`) if nothing above set the value.
 
@@ -209,7 +209,7 @@ silently no-op'ing on the first PR. The error names the offending field.
 ## Where to next
 
 <Cards>
-  <Card title=".mira.yaml overrides" href="/configuration/mira-yml" description="Per-repo override file — same fields, scoped to one repo." />
+  <Card title=".mira.yaml overrides" href="/configuration/mira-yml" description="Per-repo override file, same fields, scoped to one repo." />
   <Card title="Environment variables" href="/configuration/environment" description="Secrets and infra: GitHub App credentials, DB URL, admin password." />
   <Card title="Choosing a model" href="/configuration/models" description="OpenRouter, model splits, fallback chains." />
 </Cards>

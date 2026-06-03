@@ -31,7 +31,7 @@ and is recommended for production.
 
 <Callout type="warn">
   If you choose SQLite, **mount `MIRA_INDEX_DIR` as a persistent volume**.
-  Without a volume, the container's writable layer holds the database — every
+  Without a volume, the container's writable layer holds the database, so every
   redeploy wipes your indexes, vulnerabilities, and stats.
 </Callout>
 
@@ -59,7 +59,7 @@ OPENROUTER_API_KEY
 ADMIN_PASSWORD          # change from default before exposing dashboard
 MIRA_MODEL              # optional; defaults to anthropic/claude-sonnet-4-6
 DATABASE_URL            # optional; SQLite if unset
-MIRA_DASHBOARD_URL      # optional but recommended — appears in PR comment links
+MIRA_DASHBOARD_URL      # optional but recommended; appears in PR comment links
 ```
 
 ## Production checklist
@@ -67,7 +67,7 @@ MIRA_DASHBOARD_URL      # optional but recommended — appears in PR comment lin
 Before pointing real PRs at your deployment:
 
 - [ ] TLS termination in front of Mira (Mira's image doesn't terminate TLS).
-      See [TLS examples](/deployment/docker#tls) — Caddy, nginx + Let's Encrypt,
+      See [TLS examples](/deployment/docker#tls): Caddy, nginx + Let's Encrypt,
       or Cloudflare Tunnel. PaaS deploys ([Railway](/deployment/railway),
       [Fly](/deployment/fly), [Render](/deployment/render)) handle this for you.
 - [ ] `MIRA_WEBHOOK_SECRET` set to a long random value.
@@ -76,6 +76,6 @@ Before pointing real PRs at your deployment:
 - [ ] If using Postgres: `?sslmode=require` in `DATABASE_URL`.
 - [ ] If using SQLite: `MIRA_INDEX_DIR` mounted as a persistent volume.
 - [ ] `OPENROUTER_API_KEY` and `MIRA_GITHUB_PRIVATE_KEY` stored in your
-      platform's secret manager — never in plain env files in source control.
+      platform's secret manager, never in plain env files in source control.
 
 Full hardening guidance: [Security](/security).

@@ -4,7 +4,7 @@ description: Slash-style commands you can mention to control Mira on a PR.
 ---
 
 Mira responds to commands posted as PR comments, review-thread replies, and PR
-descriptions. All commands are addressed by mentioning the bot — by default
+descriptions. All commands are addressed by mentioning the bot, by default
 `@miracodeai`. If your deployment uses a different `MIRA_BOT_NAME`, substitute
 that instead.
 
@@ -19,7 +19,7 @@ seconds.
 | --- | --- | --- |
 | `@miracodeai review` | `review this`, `review this pr` | Re-run the full review on the current PR. Useful after a force-push, or when you want a fresh pass after merging conflict resolutions. |
 | `@miracodeai review-rest` | `review rest`, `rest`, `continue` | Review files that were skipped on the initial pass because the PR was too large. Mira tracks which files it deferred and picks up from there. |
-| `@miracodeai pause` | — | Pause Mira on this PR — no further automatic reviews until you resume. Mira adds a `mira-paused` label so the state is visible at a glance. |
+| `@miracodeai pause` | — | Pause Mira on this PR. No further automatic reviews until you resume. Mira adds a `mira-paused` label so the state is visible at a glance. |
 | `@miracodeai resume` | — | Resume Mira on a previously paused PR. Removes the `mira-paused` label and re-runs the review on the latest diff. |
 | `@miracodeai help` | `?`, `commands` | Post the command list inline as a Mira comment. Handy for teammates who haven't seen it yet. |
 | `@miracodeai <anything else>` | — | Anything that doesn't match a command verb is treated as a free-form question. Mira reads the PR diff and replies inline. Example: `@miracodeai why is the new helper synchronous?` |
@@ -34,7 +34,7 @@ thread to teach Mira how to handle similar suggestions in the future.
 | `@miracodeai reject` | `dismiss`, `resolve`, `ignore` | Resolve the thread and record a `rejected` feedback signal. Mira's rule synthesis will pick this up and avoid similar comments on future PRs from the same repo. |
 
 Mentioning Mira on a thread *without* one of those keywords is treated as a
-free-form reply — Mira's LLM classifies your intent (disagreement, question,
+free-form reply. Mira's LLM classifies your intent (disagreement, question,
 agreement, other) and responds appropriately.
 
 ## PR body
@@ -48,7 +48,7 @@ treats the PR from the start.
 
 ## Notes
 
-- Commands are **case-insensitive** — `@miracodeai REVIEW` works.
+- Commands are **case-insensitive**: `@miracodeai REVIEW` works.
 - Mira ignores its own comments, so quoting `@miracodeai review` inside a
   walkthrough doesn't trigger a self-loop.
 - All commands require Mira to be installed on the repository. See

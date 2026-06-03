@@ -12,7 +12,12 @@ export function baseOptions(): BaseLayoutProps & {
           <img
             src="/logo.png"
             alt={`${appName} logo`}
-            className="h-6 w-6 rounded"
+            className="hidden h-6 w-6 rounded dark:block"
+          />
+          <img
+            src="/logo-light.png"
+            alt={`${appName} logo`}
+            className="h-6 w-6 rounded dark:hidden"
           />
           {appName}
         </span>

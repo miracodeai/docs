@@ -3,8 +3,8 @@ title: Deploying with Docker
 description: Run the official Mira Docker image on any host that runs Docker.
 ---
 
-The simplest path. Pull the image, set env vars, mount a volume for SQLite (or
-point at Postgres), and you're running.
+Docker is the simplest path: pull the image, set your env vars, mount a volume
+for SQLite (or point at Postgres), and you're running.
 
 ## Image
 
@@ -16,63 +16,69 @@ The image is multi-stage: it builds the React dashboard, then bundles it into
 a Python 3.12 runtime that exposes port `8000` and runs `mira serve` as
 entrypoint. There's no separate UI container.
 
-## Quick run
+## Recommended run
+
+Put your config in an env file, run detached with auto-restart, and let
+Docker pull a fresh image every start:
 
 ```bash
-docker run -p 8000:8000 \
-  -e MIRA_GITHUB_APP_ID=123456 \
-  -e MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)" \
-  -e MIRA_WEBHOOK_SECRET=your-secret \
-  -e OPENROUTER_API_KEY=sk-or-... \
-  -e MIRA_MODEL=anthropic/claude-sonnet-4-6 \
-  -e ADMIN_PASSWORD=change-me \
-  ghcr.io/miracodeai/mira:latest
-```
-
-That's enough to start the server. It uses SQLite in the container's writable
-layer — fine for testing, **not for production** (data dies with the container).
-
-## Production-ready: env file + persistent SQLite
-
-```bash
-# .env (do not commit)
+# mira.env (chmod 600, do not commit)
 MIRA_GITHUB_APP_ID=123456
-MIRA_GITHUB_PRIVATE_KEY=-----BEGIN RSA PRIVATE KEY-----\n…
 MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
 OPENROUTER_API_KEY=sk-or-v1-your-key-here
 MIRA_MODEL=anthropic/claude-sonnet-4-6
 ADMIN_PASSWORD=replace-me
 MIRA_DASHBOARD_URL=https://mira.your-org.com
+DATABASE_URL=postgresql://mira:mira@db.internal:5432/mira?sslmode=require
 MIRA_INDEX_DIR=/data/indexes
 ```
 
-```bash
-docker run -d --name mira \
-  --restart unless-stopped \
-  -p 8000:8000 \
-  --env-file .env \
-  -v mira-data:/data \
-  ghcr.io/miracodeai/mira:latest
-```
+The GitHub App PEM is multi-line, which Docker's `--env-file` can't hold.
+Pick one of:
 
-The named volume `mira-data` persists the SQLite database and per-repo indexes
-across restarts and image updates.
+<Tabs items={['Bind-mount the PEM', 'Inline via -e']}>
+  <Tab value="Bind-mount the PEM">
+    Reference the PEM by path in `mira.env` and bind-mount the file into the
+    container. Mira's auth module resolves `@/abs/path.pem` at JWT-sign time.
 
-## Production-ready: external Postgres
+    ```bash
+    # add to mira.env
+    MIRA_GITHUB_PRIVATE_KEY=@/etc/mira/private-key.pem
+    ```
 
-```bash
-docker run -d --name mira \
-  --restart unless-stopped \
-  -p 8000:8000 \
-  --env-file .env \
-  -e DATABASE_URL='postgresql://mira:mira@db.internal:5432/mira?sslmode=require' \
-  -e MIRA_INDEX_DIR=/data/indexes \
-  -v mira-indexes:/data/indexes \
-  ghcr.io/miracodeai/mira:latest
-```
+    ```bash
+    docker run -d --name mira --restart unless-stopped --pull=always \
+      -p 8000:8000 \
+      --env-file ./mira.env \
+      -v /etc/mira/private-key.pem:/etc/mira/private-key.pem:ro \
+      -v mira-indexes:/data/indexes \
+      ghcr.io/miracodeai/mira:latest
+    ```
+  </Tab>
+  <Tab value="Inline via -e">
+    Read the PEM from the host filesystem into an environment variable at
+    `docker run` time. Keeps the PEM off the container filesystem.
 
-Even with Postgres, Mira keeps per-repo index artifacts on disk under
-`MIRA_INDEX_DIR` — keep a volume for those.
+    ```bash
+    docker run -d --name mira --restart unless-stopped --pull=always \
+      -p 8000:8000 \
+      --env-file ./mira.env \
+      -e MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)" \
+      -v mira-indexes:/data/indexes \
+      ghcr.io/miracodeai/mira:latest
+    ```
+  </Tab>
+</Tabs>
+
+A few notes on the flags:
+
+- **`--pull=always`** forces Docker to fetch the latest `:latest` digest
+  instead of reusing the cached image.
+- **`DATABASE_URL`** is optional. Omit it for SQLite at `MIRA_INDEX_DIR`. This
+  is fine for a single-host smoke test, but use Postgres for anything you care
+  about.
+- **`MIRA_INDEX_DIR` volume**: even with Postgres, Mira keeps per-repo index
+  artifacts on disk. The named volume persists them across image updates.
 
 ## docker compose
 
@@ -115,7 +121,7 @@ volumes:
 
 ## TLS
 
-The Mira image speaks plain HTTP on port 8000 — it does **not** terminate TLS
+The Mira image speaks plain HTTP on port 8000. It does **not** terminate TLS
 (no certificate, no HTTPS listener). Something else has to accept the HTTPS
 connection from the internet, decrypt it, and forward HTTP to Mira. GitHub
 refuses to deliver webhooks to plain `http://` URLs in most configurations,
@@ -127,7 +133,7 @@ Pick one of:
 - **A platform load balancer**: AWS ALB, GCP Load Balancer, Cloud Run.
 - **A CDN or tunnel**: Cloudflare proxy, Cloudflare Tunnel.
 - **A PaaS that handles TLS for you**: [Railway](/deployment/railway),
-  [Fly.io](/deployment/fly), or [Render](/deployment/render) — pick one of
+  [Fly.io](/deployment/fly), or [Render](/deployment/render). Pick one of
   those and skip this whole section.
 
 ### Example: Caddy on the same host
@@ -213,7 +219,7 @@ sudo certbot --nginx -d mira.your-org.com
 ```
 
 Certbot rewrites the nginx config to listen on `443` with the new
-certificate and adds a renewal cron entry — set it and forget it.
+certificate and adds a renewal cron entry. Set it and forget it.
 
 ### Example: Cloudflare Tunnel (no inbound port required)
 
@@ -235,7 +241,7 @@ services:
 ```
 
 Create the tunnel in the Cloudflare Zero Trust dashboard, point it at
-`http://mira:8000`, and Cloudflare handles HTTPS at the edge — no Let's
+`http://mira:8000`, and Cloudflare handles HTTPS at the edge, with no Let's
 Encrypt or nginx config on your end.
 
 ## Image versions

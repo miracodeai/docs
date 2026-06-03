@@ -9,8 +9,8 @@ one-time setup per organization.
 <Callout type="info">
   **Other git providers coming soon.** GitHub is the only supported provider
   today; **GitLab**, **Bitbucket**, and **Gitea** adapters are on the roadmap.
-  The review engine, indexer, and dashboard are all provider-agnostic — only
-  the webhook + comment-posting layer is GitHub-specific.
+  The review engine, indexer, and dashboard are all provider-agnostic, so only
+  the webhook and comment-posting layer is GitHub-specific.
 </Callout>
 
 <Callout type="info">
@@ -28,14 +28,14 @@ app).
 
 | Field | Value |
 | --- | --- |
-| **GitHub App name** | Whatever you'd like users to see — `Mira`, `acme-mira`, etc. The slug becomes the bot's `@mention` handle. |
+| **GitHub App name** | Whatever you'd like users to see: `Mira`, `acme-mira`, etc. The slug becomes the bot's `@mention` handle. |
 | **Homepage URL** | Your deployment URL, or `https://github.com/miracodeai/mira`. |
 | **Webhook URL** | `https://your-server.com/github/webhook` |
 | **Webhook secret** | A random 32+ byte string. Save it as `MIRA_WEBHOOK_SECRET`. |
 
 <Callout type="warn">
   Pick a strong webhook secret. Mira validates every webhook with HMAC-SHA256
-  against this value — without it, anyone who finds your webhook URL can
+  against this value, so without it anyone who finds your webhook URL can
   forge events.
 </Callout>
 
@@ -66,7 +66,7 @@ if it's just for your org.
 ## 2. Generate a private key
 
 Scroll to the bottom of the app settings page and click **Generate a private
-key**. A `.pem` file will download — keep it safe, you cannot re-download it.
+key**. A `.pem` file will download. Keep it safe, you cannot re-download it.
 
 You'll pass the contents of this file to Mira via the `MIRA_GITHUB_PRIVATE_KEY`
 environment variable. Two formats are supported:
@@ -88,19 +88,18 @@ At the top of the app settings page you'll see a numeric **App ID**. Save it as
 
 From your app's settings page, click **Install App** in the left sidebar, pick
 the org/account, and either select repos or install on all of them. Mira will
-start indexing on first install — this is normal and only happens once per repo.
+start indexing on first install. This is normal and only happens once per repo.
 
 ## 5. Bot mention name (auto-detected)
 
-Mira detects its own `@mention` handle from the GitHub App's slug at startup
-— call `GET /app` once and use the returned slug as the bot name. So if you
-named the app `acme-mira`, users mention it as `@acme-mira` and Mira already
-knows.
+Mira figures out its own `@mention` handle at startup: it calls `GET /app`
+once and uses the GitHub App's slug as its bot name. So if you named the app
+`acme-mira`, people mention it as `@acme-mira` and Mira already knows.
 
 You only need to override this in two cases:
 
 - The slug lookup is failing (network restrictions, GHES proxy quirks). Mira
-  falls back to `miracodeai` and logs a warning — set `MIRA_BOT_NAME` to your
+  falls back to `miracodeai` and logs a warning. Set `MIRA_BOT_NAME` to your
   actual slug to silence it.
 - You want Mira to listen for a different handle than its slug (e.g. a short
   alias).
