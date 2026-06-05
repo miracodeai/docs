@@ -31,8 +31,9 @@ At [github.com/settings/apps/new](https://github.com/settings/apps/new):
   in once you've deployed in step 3; you can come back and edit it).
 - **Webhook secret**: generate any 32+ byte random string and save it as
   `MIRA_WEBHOOK_SECRET`.
-- **Permissions**: Pull Requests (read & write), Contents (read), Issues
-  (read & write), Metadata (read).
+- **Permissions**: Pull Requests (read & write), Contents (read & write),
+  Issues (read & write), Metadata (read). Contents needs **write** (not just
+  read) so Mira can auto-resolve review threads — GitHub requires it.
 - **Events**: Pull request, Issue comment, Push, Installation.
 - **Private key**: generate a `.pem` and download it.
 

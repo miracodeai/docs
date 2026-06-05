@@ -46,7 +46,7 @@ Repository permissions:
 | Permission | Access | Why |
 | --- | --- | --- |
 | **Pull requests** | Read & write | Post inline comments and walkthroughs. |
-| **Contents** | Read | Read source files for indexing and review context. |
+| **Contents** | Read & write | Read source files for indexing/review context, **and resolve review threads** — GitHub's `resolveReviewThread` requires `contents: write`, not just `pull_requests: write`. With only `contents: read`, Mira can post and minimize comments but silently fails to auto-resolve threads. |
 | **Issues** | Read & write | Receive `@mention` comments and post replies. |
 | **Metadata** | Read | Required by GitHub for any app. |
 | **Checks** | Read & write *(optional)* | Surface review status as a check. |
