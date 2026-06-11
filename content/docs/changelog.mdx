@@ -9,6 +9,23 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
+## 0.3.0 (2026-06-11)
+
+### Added
+
+- **Outbound webhooks.** POST to Slack, Microsoft Teams, or a generic JSON endpoint when a review finishes, fails, surfaces a high-severity finding, or a repo finishes indexing. Configured on the admin Settings page. Delivery is best-effort and SSRF-guarded, so a slow or misconfigured endpoint can't delay or break a review.
+- **User management.** Self-service password change and admin password reset (proper pages, not modals), a sidebar user dropdown with account switching, avatars, and last-sign-in tracking.
+- **Per-page browser tab titles.** Each dashboard page sets its own title.
+
+### Fixed
+
+- **Thinking-mode models no longer fail reviews.** Models that reject a forced `tool_choice` (e.g. deepseek thinking mode) are detected and retried with `tool_choice: "auto"`, then remembered so later calls skip the doomed attempt.
+
+### Changed
+
+- **Evals gate the release build.** The LLM eval suite runs on a release tag and the container only ships if it passes; the noisy quality scorecard moved to a separate nightly benchmark job.
+- Dashboard API client split into per-domain modules (internal refactor).
+
 ## 0.2.3 (2026-06-08)
 
 ### Added
