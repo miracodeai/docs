@@ -9,6 +9,17 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
+## 0.3.1 (2026-06-11)
+
+### Added
+
+- **Review thinking mode.** An extended-reasoning budget for reviews (`off` / `low` / `medium` / `high` / `max`) so a model reasons more before commenting. Set it in `mira.yaml` (`llm.review_reasoning_effort`) or on the Settings page; reviews only, defaults to off. Works on OpenRouter (DeepSeek, Claude, OpenAI reasoning models) and Bedrock (Claude); dropped automatically where unsupported so the review still runs.
+- **Runtime-adjustable model registry.** Point `MIRA_MODELS_JSON_PATH` at your own `models.json` to add custom models or override bundled ones without reinstalling — entries overlay the bundled list by id, and a missing/invalid file is ignored with a warning.
+
+### Changed
+
+- Eval suite hardened for reliable release gating: a pinned filter config (immune to ambient overrides), retrying catch tests, and the noisy comment-count metric moved to the nightly benchmark.
+
 ## 0.3.0 (2026-06-11)
 
 ### Added

@@ -73,6 +73,28 @@ llm:
 
 The dashboard's **Settings** page exposes the same split via dropdowns.
 
+## Review thinking mode
+
+Reviews can run with an **extended-reasoning budget** so a model spends more
+effort before commenting — useful for pairing a cheaper model with deeper
+analysis. Set it in `mira.yaml` or via the **Review Thinking Mode** dropdown on
+the Settings page:
+
+```yaml
+llm:
+  review_reasoning_effort: "high"   # off | low | medium | high | max
+```
+
+It applies to reviews only (never indexing) and defaults to `off`.
+
+**Provider support.** Thinking mode is sent as OpenRouter's unified
+`reasoning.effort`, so it works out of the box on **OpenRouter** (DeepSeek,
+Claude, and OpenAI reasoning models) and on **Bedrock** for Claude (mapped to a
+thinking-token budget). `max` is DeepSeek's top level — on OpenRouter it's sent
+as `xhigh`, the equivalent there. On models or endpoints that don't support a
+reasoning effort, Mira drops it and reviews normally rather than failing, so
+turning it on is always safe.
+
 ## Fallback chain
 
 If the primary model errors (rate limit, transient outage), Mira retries with
