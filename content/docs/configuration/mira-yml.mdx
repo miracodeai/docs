@@ -15,7 +15,7 @@ overrides without committing a file.
 ## Schema
 
 Same as [`mira.yaml`](/configuration/global-config): `llm`, `filter`,
-`review`, every key optional. The
+`review`, `index`, every key optional. The
 [deployment-config reference](/configuration/global-config) documents every
 key; anything there is overridable here.
 
@@ -47,6 +47,18 @@ A backend wanting the stronger model for review, the cheap one for indexing:
 llm:
   review_model: "anthropic/claude-opus-4-7"
   indexing_model: "anthropic/claude-haiku-4-5"
+```
+
+A large repo keeping indexing cheap — skip files over 256 KB and don't index
+the committed `vendor/` tree:
+
+```yaml
+# .mira.yaml
+filter:
+  exclude_patterns:
+    - "vendor/**"
+index:
+  max_file_size: 262144
 ```
 
 Every other key inherits from `mira.yaml`. See

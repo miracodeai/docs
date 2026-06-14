@@ -9,6 +9,18 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
+## 0.4.0 (2026-06-14)
+
+### Added
+
+- **Exclude patterns now apply to indexing.** `filter.exclude_patterns` governs the index as well as review, so committed vendor dirs, generated SDKs, and test data stay out of indexing without burning tokens — the same globs that exclude a file from review exclude it from indexing, and the per-repo file count reflects them.
+- **Indexing file-size limit.** New `index.max_file_size` (bytes, default 1 MB) skips any file above the limit before it reaches the summarizer. Lower it to keep indexing cheap on large codebases with big fixtures or generated files; `0` disables the limit.
+
+### Fixed
+
+- **Indexing no longer drops a whole batch on one malformed file.** Summarization responses with unescaped backslashes (e.g. DeepSeek emitting PHP namespaces like `\App\Models` inside JSON strings) are repaired before parsing, so a single bad string no longer fails the parse and discards every file in the batch.
+- **Indexing no longer crashes on a null symbol field.** A model emitting an explicit `"signature": null` was inserting `NULL` into a `NOT NULL` column and aborting the file; those fields now fall back to their defaults and nameless symbols are skipped.
+
 ## 0.3.1 (2026-06-11)
 
 ### Added

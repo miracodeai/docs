@@ -86,6 +86,11 @@ review:
   security_pass: true
   agentic_tools: true
   jit_java_go: true
+  ensemble_runs: 1
+  ensemble_temperature: 0.3
+
+index:
+  max_file_size: 1048576
 ```
 
 ## `llm`
@@ -154,9 +159,10 @@ goal is "every comment is one you'd want to land."
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
 | `confidence_threshold` | float (0.0–1.0) | `0.7` | Drop comments the LLM rated below this confidence. Raise for less noise; lower for more coverage. |
+| `category_confidence_thresholds` | map | `{}` | Per-category floors layered over `confidence_threshold` (the higher wins). E.g. `{security: 0.85}` holds security findings to a stricter bar without raising the global floor. |
 | `max_comments` | int | `5` | Hard cap on inline comments per PR. The most severe + most confident `N` are kept. |
 | `min_severity` | string | `nitpick` | Drop comments below this severity. Levels: `nitpick`, `suggestion`, `warning`, `blocker`. |
-| `exclude_patterns` | string[] | lockfiles, minified, images, fonts, archives | Glob patterns of files Mira should never review. |
+| `exclude_patterns` | string[] | lockfiles, minified, images, fonts, archives | Glob patterns of files Mira should never review. Also applied to indexing — a file matching one of these is skipped by both the reviewer and the indexer (on top of the built-in skip list). |
 | `exclude_deleted` | bool | `true` | Skip files removed by the diff; they aren't there to comment on. |
 | `max_files` | int | `50` | Cap on files reviewed in a single PR. PRs above this are partially reviewed; the skipped files appear in the walkthrough. |
 
@@ -186,7 +192,17 @@ Controls *how* Mira reviews: diff sizing, walkthrough behaviour, parallelism.
 | `self_critique` | bool | `true` | Second-pass LLM critique on each draft comment; failed ones are dropped. Disable for faster reviews. |
 | `security_pass` | bool | `true` | Dedicated security review pass (XSS, injection, auth bypass, CSRF, SSRF, deserialization, crypto) in parallel with the main review. Runs on the *indexing* tier model; bump `llm.indexing_model` if you want the heavy model here too. |
 | `agentic_tools` | bool | `true` | On unindexed repos, give the reviewer LLM `read_file` / `grep_repo` tools for cross-file context. No effect on indexed repos. |
-| `jit_java_go` | bool | `true` | JIT cross-file resolver attempts Java + Go imports. Heuristic for those languages; toggle off to A/B test impact. |
+| `jit_java_go` | bool | `true` | JIT cross-file resolver attempts Java + Go imports. Go resolves deterministically when a `go.mod` is present; Java is heuristic. Toggle off to A/B test impact. |
+| `ensemble_runs` | int (1–5) | `1` | Thorough mode: review each chunk N times in parallel and keep only majority-vote findings. Variance-driven false positives flicker across runs; real findings recur. `1` = off. Token cost multiplies by N; wall clock stays roughly flat. |
+| `ensemble_temperature` | float (0.0–1.0) | `0.3` | Sampling temperature for the extra ensemble runs (the first run keeps `llm.temperature`). Mild diversity makes the vote meaningful. |
+
+## `index`
+
+Controls the codebase indexing pass that powers cross-file review context. Indexing also honours `filter.exclude_patterns` (see above).
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `max_file_size` | int (bytes) | `1048576` | Skip indexing any file larger than this. Generated SDKs, vendored bundles, and large test fixtures burn indexing tokens for little value; lower this to keep indexing cheap on big repos. `0` disables the limit. |
 
 ## How merging works
 
