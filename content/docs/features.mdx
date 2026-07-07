@@ -110,8 +110,13 @@ Mira gets better over time without you having to write rules yourself.
 - **LLM-powered human-pattern synthesis.** On merged PRs, Mira reads the human
   reviewers' comments and turns recurring themes into rules.
 - **Feedback stats API.** Inspect the learning loop from the dashboard.
-- **Synthesized rules stay visible.** The **Learned rules** page lists every
-  rule the loop has produced, and you can edit or remove any of them.
+- **Quarantine for new learnings.** Freshly synthesized learnings land in a
+  pending queue on the **Learnings** page and only apply to reviews once you
+  approve them. Decline one and it stays suppressed — future feedback keeps
+  its evidence count fresh but can't resurrect it.
+- **Edit and delete.** Reword any learning inline (manual edits survive
+  re-synthesis) or delete it outright. Deleting forgets the learning, so the
+  same pattern can return as pending; declining suppresses it for good.
 
 ## Bring your own LLM
 
@@ -124,14 +129,17 @@ Mira gets better over time without you having to write rules yourself.
 - **Fallback chain.** If the primary model errors, Mira retries with
   `fallback_model`.
 
-## GitHub integration
+## Platform integration
 
 - **GitHub App.** Auto-reviews every PR.
-- **GitHub Enterprise Server.** Point
-  [`MIRA_GITHUB_API_URL`](/configuration/environment#github-app) at your GHES
-  instance.
-- **Chat with the bot.** Mention `@miracodeai <question>` on any PR thread and
-  the bot answers using the indexed code as context.
+- **GitLab.** Auto-reviews every merge request with full feature parity, via a
+  group or project access token. See [Set up GitLab](/gitlab).
+- **Self-managed / Enterprise.** Point
+  [`MIRA_GITHUB_API_URL`](/configuration/environment#github-app) at GitHub
+  Enterprise Server, or [`MIRA_GITLAB_API_URL`](/configuration/environment#gitlab)
+  at a self-managed GitLab instance.
+- **Chat with the bot.** Mention `@miracodeai <question>` on any PR or MR thread
+  and the bot answers using the indexed code as context.
 - **Cancel in-progress indexing.** Stop a long-running indexing job from the
   dashboard.
 

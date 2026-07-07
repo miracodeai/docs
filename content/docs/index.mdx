@@ -31,10 +31,10 @@ learning loop. There's no paid tier and no license key to buy.
 
 ## Coming soon
 
-- **More git providers.** GitLab, Bitbucket, and Gitea adapters are on the
-  way. The review engine, indexer, and dashboard are already
-  provider-agnostic; only the webhook and comment-posting layer is
-  GitHub-specific today.
+- **More git providers.** GitHub and GitLab are both fully supported today;
+  Bitbucket and Gitea adapters are on the way. The platform layer is data, not
+  code — each host is a registry entry plus one provider class — so the engine,
+  indexer, and dashboard stay provider-agnostic.
 - **Direct LLM backends.** Native adapters for Anthropic, OpenAI, Google
   Vertex, Ollama, and vLLM will sit alongside OpenRouter. These help when you
   already hold provider keys, run open-weights models in-house, or have

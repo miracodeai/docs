@@ -9,10 +9,52 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
+## 0.6.0 (unreleased — GitLab, on `feature/add-gitlab-integration`)
+
+### Added
+
+- **GitLab support — full parity with GitHub.** Mira auto-reviews merge requests via webhooks, posts inline comments anchored to diff positions (with a plain-note fallback when GitLab rejects a position), and answers `@mention` commands on MRs: `review`, `review-rest`, `pause`/`resume`, inline `reject`, free-form questions, and merge-time learning. Incremental re-review, thread auto-resolution, JIT cross-file context, file history, indexing, push indexing, and vulnerability/package search all match GitHub. Auth is a group or project access token — set `MIRA_GITLAB_TOKEN` + `MIRA_GITLAB_WEBHOOK_SECRET` and point a webhook at `/gitlab/webhook`; self-managed sets `MIRA_GITLAB_API_URL`. GitHub credentials are optional when GitLab is configured. See [Set up GitLab](/gitlab).
+- **Dynamic platform layer.** Adding a git host is data, not code: a `platforms.json` registry (mirroring `providers.json` for LLMs) carries each platform's API URL, webhook route, signature scheme, and terminology, overridable via `MIRA_PLATFORMS_JSON_PATH`. The repo data model extends to `(platform, owner, repo)`; existing GitHub rows migrate automatically.
+- **Mira answers to both its handles.** On either platform, a mention of the configured `MIRA_BOT_NAME` or the bot's real account username triggers a command — whichever a teammate types.
+
+### Changed
+
+- **Review comment headers use one severity marker instead of two emojis.** The category line is now plain bold text above the severity badge. Cleaner, still scannable, and renders correctly on both GitHub and GitLab.
+
+### Fixed
+
+- **Malformed LLM JSON is recovered instead of dropped.** Responses that leak tool-call XML or arrive with an unbalanced brace are repaired before parsing, so a chunk's comments are no longer lost when output strays from clean JSON.
+
+## 0.5.0 (2026-07-06)
+
+### Added
+
+- **Learnings quarantine — approve before they apply.** Auto-synthesized learnings (from accept/reject signals and human review comments) now land in a pending state and only inject into reviews once approved on the Learnings page. Declining a learning suppresses it permanently — future feedback keeps its evidence count fresh but can't resurrect it. Existing learnings are grandfathered as approved, so upgrading changes nothing until you triage.
+- **Learnings are editable and deletable.** Reword a learning's rule text inline (manual edits survive re-synthesis) or delete it outright; a deleted learning can return as pending if the same feedback pattern re-emerges. Declined learnings sit in a collapsed section with one-click restore.
+
+## 0.4.1 (2026-07-06)
+
+### Added
+
+- **Activity page.** An org-wide feed of PR reviews with a filterable table and a per-PR detail timeline.
+- **Backend-aware, searchable model pickers.** The dashboard's model dropdowns are now search bars listing the configured backend's live catalog — OpenRouter's tool-capable models, your Bedrock account's inference profiles, or a generic endpoint's `/models` — cached for an hour with the bundled registry as fallback. Any free-form model id can be typed directly, and an **Inherit from deployment config** choice clears the dashboard override so `mira.yaml` is authoritative again. The effective model and its source are logged on every review.
+- **Current-generation models in the registry.** GPT-5 Nano/Mini, GPT-5.1 Codex/Codex Mini, GPT-4.1 Mini, Gemini 3 Flash (Preview), and Gemini 3.1 Flash Lite, with pricing verified against the live OpenRouter catalog.
+
+### Changed
+
+- **`llm.base_url` is validated at config load.** Non-http(s) schemes are rejected, and plain `http://` is allowed only for local endpoints (localhost, private IPs, dotless hostnames like docker-compose services); public hosts must use `https://`.
+
+### Fixed
+
+- **Discord webhooks work via the Slack-compatible endpoint.** A `discord.com/api/webhooks/…/slack` URL is now detected as Slack format instead of falling through to generic JSON, which Discord rejects. Bare Discord URLs stay generic so the test button surfaces the mismatch loudly.
+- **Dependency-bump pushes refresh the vulnerability inventory.** Push-triggered incremental indexing skipped manifests/lockfiles (they're excluded from code indexing), so merging a lockfile-only PR left the package inventory stale and the Vulnerabilities page kept flagging already-fixed advisories until a full re-index. Manifest changes now refresh the inventory and trigger an immediate vulnerability poll.
+- **Global rules now reach reviews on Postgres deployments.** The review engine read global rules from a throwaway SQLite database instead of the configured `DATABASE_URL` backend, so dashboard-stored rules were silently ignored and a stray `_app.db` was created on every review.
+
 ## 0.4.0 (2026-06-14)
 
 ### Added
 
+- **Provider profiles — adding an LLM provider is now data, not code.** The OpenAI-compatible client's per-provider quirks (attribution headers, whether the model id keeps its `vendor/` prefix, reasoning-effort remapping) moved out of hardcoded OpenRouter branches into a declarative `providers.json`, matched by `base_url`. OpenRouter's quirks are now a profile entry rather than code branches; an endpoint with no matching profile gets the portable default, so most OpenAI-compatible providers work with only `base_url` + `api_key_env`. Override the bundled list at runtime via `MIRA_PROVIDERS_JSON_PATH`. No behaviour change for existing configs.
 - **Exclude patterns now apply to indexing.** `filter.exclude_patterns` governs the index as well as review, so committed vendor dirs, generated SDKs, and test data stay out of indexing without burning tokens — the same globs that exclude a file from review exclude it from indexing, and the per-repo file count reflects them.
 - **Indexing file-size limit.** New `index.max_file_size` (bytes, default 1 MB) skips any file above the limit before it reaches the summarizer. Lower it to keep indexing cheap on large codebases with big fixtures or generated files; `0` disables the limit.
 

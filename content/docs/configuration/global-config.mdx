@@ -112,9 +112,12 @@ Controls which model is used and how it's invoked.
 ### Custom endpoints
 
 Any OpenAI-compatible chat-completions API works. Point `llm.base_url` at the
-right URL and set `llm.api_key_env` to the env var holding the key. Mira
-auto-detects OpenRouter and skips ranking headers (`HTTP-Referer`, `X-Title`)
-for any other endpoint.
+right URL and set `llm.api_key_env` to the env var holding the key. Mira looks
+up a **provider profile** by `base_url` to apply any per-provider quirks
+(attribution headers, whether the model id keeps its `vendor/` prefix, reasoning
+remapping); an endpoint with no profile gets the portable default — bare model
+name, no extra headers — so most providers need nothing more than `base_url` +
+`api_key_env`.
 
 **Ollama** (local, no auth):
 
@@ -146,6 +149,27 @@ llm:
 **Together / Fireworks / Groq / Cerebras / Anyscale / LocalAI** use the same
 shape; set `base_url` to the provider's `/v1` endpoint and `api_key_env` to the env
 var holding your key.
+
+#### Adding a provider profile
+
+Profiles only matter when a provider needs a quirk the default doesn't cover
+(ranking headers, keeping the `vendor/model` prefix, remapping a reasoning
+level). The bundled set lives in `src/mira/llm/providers.json`; to add or
+override one at runtime without forking, point `MIRA_PROVIDERS_JSON_PATH` at
+your own file — the same override idiom as `MIRA_MODELS_JSON_PATH` for the model
+registry. A profile is matched to a request by `base_url`:
+
+```json
+{
+  "acme": {
+    "base_url": "https://llm.acme.ai/v1",
+    "api_key_env": "ACME_API_KEY",
+    "model_prefix": "keep",
+    "extra_headers": { "X-Acme-Project": "mira" },
+    "reasoning_effort_map": { "max": "xhigh" }
+  }
+}
+```
 
 > Reviews require the model to support **tool/function calling**. Most hosted
 > providers support it; for self-hosted models pick one with structured-output

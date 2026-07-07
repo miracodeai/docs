@@ -16,14 +16,18 @@ for things you don't want in a checked-in YAML file. `MIRA_MODEL` and
 
 ## Required at minimum
 
-These four must be set for `mira serve` to start:
+`OPENROUTER_API_KEY` is always required, plus credentials for **at least one**
+platform — GitHub, GitLab, or both. `mira serve` won't start without one
+platform configured.
 
 | Variable | Description |
 | --- | --- |
-| `MIRA_GITHUB_APP_ID` | Numeric ID from your GitHub App settings page. |
-| `MIRA_GITHUB_PRIVATE_KEY` | Contents of the `.pem` file generated when you created the GitHub App. The CLI also accepts `@/path/to/key.pem` syntax. |
-| `MIRA_WEBHOOK_SECRET` | Random 32+ byte string. Must match the value you set in the GitHub App's webhook settings. |
 | `OPENROUTER_API_KEY` | Your [OpenRouter](https://openrouter.ai) key. (Mira also accepts `OPENAI_API_KEY` as a fallback name for backwards compatibility.) |
+| `MIRA_GITHUB_APP_ID` | **GitHub:** numeric ID from your GitHub App settings page. |
+| `MIRA_GITHUB_PRIVATE_KEY` | **GitHub:** contents of the `.pem` file generated when you created the GitHub App. The CLI also accepts `@/path/to/key.pem` syntax. |
+| `MIRA_WEBHOOK_SECRET` | **GitHub:** random 32+ byte string. Must match the value you set in the GitHub App's webhook settings. |
+| `MIRA_GITLAB_TOKEN` | **GitLab:** a group or project access token with the `api` scope. See the [GitLab setup guide](/gitlab). |
+| `MIRA_GITLAB_WEBHOOK_SECRET` | **GitLab:** secret token, matching the one set on the project/group webhook. |
 
 ## GitHub App
 
@@ -35,6 +39,18 @@ These four must be set for `mira serve` to start:
 | `MIRA_BOT_NAME` | *auto-detected from the App's slug* | Override the bot `@mention` handle. Leave unset and Mira reads its own slug from `GET /app` at startup; falls back to `miracodeai` only if that call fails. |
 | `MIRA_GITHUB_API_URL` | `https://api.github.com` | Override for GitHub Enterprise Server. |
 | `MIRA_GITHUB_GRAPHQL_URL` | `https://api.github.com/graphql` | Override for GitHub Enterprise Server. |
+
+## GitLab
+
+Configure these to review GitLab merge requests. GitHub App variables become
+optional when GitLab is set. Full walkthrough: [Set up GitLab](/gitlab).
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_GITLAB_TOKEN` | — | **Required for GitLab.** Group or project access token (`api` scope). The token's user is who Mira comments as. |
+| `MIRA_GITLAB_WEBHOOK_SECRET` | — | **Required for GitLab.** Secret token compared against each webhook's `X-Gitlab-Token`. |
+| `MIRA_GITLAB_API_URL` | `https://gitlab.com/api/v4` | API base for self-managed instances, e.g. `https://gitlab.acme.com/api/v4`. |
+| `MIRA_BOT_NAME` | *auto-detected from the token user* | Shared with GitHub. Override the bot `@mention` handle; otherwise Mira reads the token user's username at startup. |
 
 ## LLM
 
@@ -88,10 +104,14 @@ control when Mira synthesizes a new rule from feedback signals.
 ## A complete `.env`
 
 ```bash
-# GitHub App
+# GitHub App (or use GitLab below — at least one platform required)
 export MIRA_GITHUB_APP_ID=123456
 export MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)"
 export MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
+
+# GitLab (alternative or in addition to GitHub)
+# export MIRA_GITLAB_TOKEN=glpat-your-access-token
+# export MIRA_GITLAB_WEBHOOK_SECRET=replace-with-32-bytes-of-random
 
 # LLM
 export OPENROUTER_API_KEY=sk-or-v1-your-key-here

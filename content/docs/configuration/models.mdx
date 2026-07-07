@@ -43,8 +43,8 @@ lists in the format `provider/model-id`.
 | Default (balanced) | `anthropic/claude-sonnet-4-6` | What Mira ships with. |
 | Fastest reviews | `anthropic/claude-haiku-4-5` | Cheaper and faster. Good for low-stakes repos. |
 | Highest quality | `anthropic/claude-opus-4-6` | Strongest review, most expensive. |
-| OpenAI shop | `openai/gpt-4o` | Or `openai/gpt-4o-mini` for cheap. |
-| Google shop | `google/gemini-2.5-pro` | Or `google/gemini-2.5-flash` for cheap. |
+| OpenAI shop | `openai/gpt-5.1-codex` | Code-tuned. Or `openai/gpt-5.1-codex-mini` for cheap. |
+| Google shop | `google/gemini-2.5-pro` | Or `google/gemini-3-flash-preview` for cheap. |
 
 Set it once via env var:
 
@@ -71,7 +71,12 @@ llm:
   review_model: "anthropic/claude-sonnet-4-6"
 ```
 
-The dashboard's **Settings** page exposes the same split via dropdowns.
+The dashboard's **Settings** page exposes the same split via searchable model
+pickers. They list your backend's live catalog (OpenRouter, Bedrock, or any
+OpenAI-compatible endpoint), accept any free-form model id, and offer an
+**Inherit from deployment config** choice that defers to `mira.yaml`. Mira logs
+the effective model and where it came from (`dashboard setting` vs `mira.yaml`)
+on every review, so an override is never silent.
 
 ## Review thinking mode
 
@@ -136,31 +141,42 @@ the same as with OpenRouter. The model must be enabled in your account for the
 configured `region`, and you'll need the `boto3` dependency available in the
 runtime.
 
-<Callout type="warn">
-  Bedrock models aren't in Mira's dashboard registry, so they won't show pricing
-  or a "Recommended" badge — but review and indexing work normally.
+<Callout type="info">
+  On Bedrock, the dashboard's model pickers list your account's inference
+  profiles and on-demand foundation models for the configured region — only ids
+  your deployment can actually serve.
 </Callout>
 
-## Recognised models
+## Model catalog
 
-Only models in Mira's registry can be selected from the dashboard. That keeps
-the per-purpose recommendations and the pricing display accurate. The current
-registry lives at [`src/mira/llm/models.json`](https://github.com/miracodeai/mira/blob/main/src/mira/llm/models.json).
+The dashboard's model pickers list your backend's **live catalog**: OpenRouter's
+tool-capable models, your Bedrock account's inference profiles, or a generic
+endpoint's `/models` listing (refreshed hourly; if the fetch fails, Mira falls
+back to its bundled registry). Any free-form id can also be typed directly —
+the same flexibility as `.mira.yaml`.
+
+The bundled registry at
+[`src/mira/llm/models.json`](https://github.com/miracodeai/mira/blob/main/src/mira/llm/models.json)
+supplies labels, per-purpose recommendations, and the pricing used in cost
+estimates. Models outside it work normally but show default pricing in
+estimates and no "Recommended" badge. Highlights:
 
 | Model | Provider | Input ctx | Output | Indexing | Review |
 | --- | --- | --: | --: | :-: | :-: |
 | `anthropic/claude-haiku-4-5` | Anthropic | 200k | 64k | ✅ recommended | ✅ |
 | `anthropic/claude-sonnet-4-6` | Anthropic | 200k | 64k | — | ✅ recommended |
 | `anthropic/claude-opus-4-6` | Anthropic | 200k | 32k | — | ✅ |
+| `openai/gpt-5-nano` | OpenAI | 400k | 128k | ✅ | — |
+| `openai/gpt-5-mini` | OpenAI | 400k | 128k | ✅ | ✅ |
+| `openai/gpt-5.1-codex-mini` | OpenAI | 400k | 100k | ✅ | ✅ |
+| `openai/gpt-5.1-codex` | OpenAI | 400k | 128k | — | ✅ |
+| `openai/gpt-4.1-mini` | OpenAI | 1M | 32k | ✅ | — |
 | `openai/gpt-4o-mini` | OpenAI | 128k | 16k | ✅ | — |
 | `openai/gpt-4o` | OpenAI | 128k | 16k | — | ✅ |
+| `google/gemini-3-flash-preview` | Google | 1M | 65k | ✅ | ✅ |
+| `google/gemini-3.1-flash-lite` | Google | 1M | 65k | ✅ | — |
 | `google/gemini-2.5-flash` | Google | 1M | 65k | ✅ | — |
 | `google/gemini-2.5-pro` | Google | 1M | 65k | — | ✅ |
-
-To use a model that isn't on this list, set it directly in `.mira.yaml` and Mira
-will pass the string through to OpenRouter. You won't get the dashboard's
-pricing display or the "Recommended" badge for unrecognised models, but
-review/index will work.
 
 ## Cost expectations
 

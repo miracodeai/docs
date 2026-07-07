@@ -1,0 +1,93 @@
+---
+title: Set up GitLab
+description: Connect Mira to GitLab with a group or project access token and a webhook — full review parity with GitHub.
+---
+
+Mira reviews GitLab merge requests with the same feature set as GitHub PRs:
+inline comments, `@mention` commands, pause/resume, thread auto-resolution,
+incremental re-review, indexing, and merge-time learning. GitLab has no
+app-install model, so instead of a GitHub App you give Mira a **group or
+project access token** and point a **webhook** at your deployment.
+
+<Callout type="info">
+  GitLab.com (SaaS) and self-managed GitLab both work. For self-managed, set
+  `MIRA_GITLAB_API_URL` to your instance's API base (e.g.
+  `https://gitlab.acme.com/api/v4`).
+</Callout>
+
+## 1. Create an access token
+
+Decide on the scope:
+
+- **Group access token** (recommended) — reviews every project in the group.
+  Settings live at **Group → Settings → Access tokens**.
+- **Project access token** — one project. **Project → Settings → Access tokens**.
+
+| Field | Value |
+| --- | --- |
+| **Name** | Anything, e.g. `mira`. Becomes part of the bot's username. |
+| **Role** | `Developer` or higher (needed to post notes, resolve discussions, and manage the `mira-paused` label). |
+| **Scopes** | `api` |
+
+Copy the token — it's shown once. The token's user is who Mira posts as: GitLab
+auto-creates a bot user like `group_123_bot_abc…`. On **Ultimate**, create a
+[service account](https://docs.gitlab.com/ee/user/profile/service_accounts.html)
+first if you want a custom bot name and avatar, then issue the token for it.
+
+<Callout type="warn">
+  Mira recognizes its own past comments by the token user's username. If you
+  **rotate the token to a different user** mid-MR, older threads stop being
+  recognized as Mira's (no dedup, no auto-resolve on those). Rotating to a
+  token for the *same* user is fine.
+</Callout>
+
+## 2. Add a webhook
+
+On the same group or project, go to **Settings → Webhooks → Add new webhook**:
+
+| Field | Value |
+| --- | --- |
+| **URL** | `https://your-server.com/gitlab/webhook` |
+| **Secret token** | A random 32+ byte string. Save it as `MIRA_GITLAB_WEBHOOK_SECRET`. |
+| **Trigger: Merge request events** | ✅ — drives auto-review on open / new commits / merge. |
+| **Trigger: Comments** | ✅ — drives `@mention` commands and inline replies. |
+| **Trigger: Push events** | ✅ — keeps the index fresh on pushes to the default branch. |
+
+Mira verifies every webhook by comparing the secret token, so the value here
+must match `MIRA_GITLAB_WEBHOOK_SECRET` exactly.
+
+## 3. Configure Mira
+
+Set the GitLab environment variables (see the full
+[environment reference](/configuration/environment)):
+
+```bash
+export MIRA_GITLAB_TOKEN=glpat-…              # the access token from step 1
+export MIRA_GITLAB_WEBHOOK_SECRET=…           # matches the webhook secret
+# Self-managed only:
+export MIRA_GITLAB_API_URL=https://gitlab.acme.com/api/v4
+```
+
+GitHub App credentials are **optional** when GitLab is configured — set GitLab
+creds, GitHub creds, or both. With both, `mira serve` exposes
+`/github/webhook` and `/gitlab/webhook` and reviews repos on each.
+
+Mira's `@mention` handle is auto-detected from the token user's username; set
+`MIRA_BOT_NAME` to override it. A teammate can mention either the configured
+name or the bot's real username — both trigger commands.
+
+## 4. Open a merge request
+
+A project becomes known to Mira the first time it sees an MR for it — Mira
+registers it automatically, so it shows up in the dashboard ready to
+[index](/features#indexing). Open or update an MR and Mira posts a walkthrough
+and inline review.
+
+All [commands](/commands) work on MRs exactly as they do on PRs:
+`@mira review`, `pause` / `resume`, `reject`, and free-form questions.
+
+<Callout type="info">
+  Indexing a GitLab repo uses the same access token. Trigger it from the
+  dashboard once the project appears; pushes to the default branch then keep it
+  incrementally up to date.
+</Callout>

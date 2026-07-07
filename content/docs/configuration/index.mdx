@@ -8,7 +8,7 @@ Mira's configuration is layered. Highest priority wins.
 | Layer | File / surface | Lifecycle | Scope |
 | --- | --- | --- | --- |
 | Deployment-wide | [`mira.yaml` via `--config`](/configuration/global-config) | Mounted into the container at startup | Default LLM, filter, review settings for *every* repo this Mira instance reviews. **Full schema.** |
-| Admin UI overrides | Dashboard → **Settings → Review behaviour overrides** | Stored in Mira's database, editable without restart | Runtime tweaks to `filter` + `review` knobs only. **Model selection is intentionally not exposed here.** It lives in `mira.yaml` and the existing **Settings → Models** dropdown. |
+| Admin UI overrides | Dashboard → **Settings → Review behaviour overrides** | Stored in Mira's database, editable without restart | Runtime tweaks to `filter` + `review` knobs only. **Model selection is intentionally not exposed here.** It lives in `mira.yaml` and the **Settings → Models** picker. |
 | Per-repo file | [`.mira.yaml`](/configuration/mira-yml) at the repo root, **optional** | Committed to the repo | Per-repo overrides, including `llm.model` if a single repo needs a different model. **Same schema as `mira.yaml`.** |
 | Secrets & infra | [Environment variables](/configuration/environment) | Set in your host (Docker, Fly, Railway, Render) | GitHub App credentials, OpenRouter key, database URL, admin password |
 
@@ -25,9 +25,12 @@ once per deployment, not iterate on weekly. Two surfaces cover them:
 
 - **`mira.yaml`**: the canonical place for the deployment's default model
   and fallback chain. Version-controllable.
-- **Dashboard → Settings → Models**: the existing dropdown for changing
-  the indexing and review models without rewriting `mira.yaml`. Persists
-  to the same DB the admin overrides use.
+- **Dashboard → Settings → Models**: a searchable picker over your backend's
+  live catalog (any free-form id works too) for changing the indexing and
+  review models without rewriting `mira.yaml`. Persists to the same DB the
+  admin overrides use. A saved picker choice **overrides `mira.yaml`** until
+  you select **Inherit from deployment config**; Mira logs the effective
+  model and its source on every review, so the override is never silent.
 
 If you genuinely need a different model on a single repo, set `llm.model`
 in that repo's `.mira.yaml`. There's no equivalent UI for it because the
@@ -52,6 +55,11 @@ For any given setting, Mira resolves in this order (highest priority first):
 4. Deployment-wide [`mira.yaml`](/configuration/global-config) loaded via `--config` at server startup.
 5. Environment variable fallbacks (`MIRA_MODEL`, `DATABASE_URL`).
 6. Built-in defaults.
+
+The indexing/review models have one extra layer: a model saved in
+**Settings → Models** (DB-backed) beats `mira.yaml`'s
+`llm.indexing_model` / `llm.review_model`. Select **Inherit from deployment
+config** in the picker to clear it and hand control back to the file.
 
 ## Where to next
 
