@@ -25,6 +25,13 @@ this page mirrors it.
 
 - **Malformed LLM JSON is recovered instead of dropped.** Responses that leak tool-call XML or arrive with an unbalanced brace are repaired before parsing, so a chunk's comments are no longer lost when output strays from clean JSON.
 
+## 0.5.1 (2026-07-09)
+
+### Fixed
+
+- **One malformed walkthrough entry no longer drops the whole walkthrough.** When the LLM omits a required `path` or `label` on a single `change_groups` entry (plausible on large diffs), that entry is now skipped with a warning instead of failing the entire response, so the walkthrough comment still posts.
+- **The walkthrough placeholder is always finalized.** When a review produces no walkthrough (all files matched exclusion rules, empty diff, size limits, or walkthrough generation failed), the "Reviewing this PR…" placeholder comment is now updated with the reason instead of staying stuck forever.
+
 ## 0.5.0 (2026-07-06)
 
 ### Added
