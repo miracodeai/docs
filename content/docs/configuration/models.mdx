@@ -42,9 +42,9 @@ lists in the format `provider/model-id`.
 | --- | --- | --- |
 | Default (balanced) | `anthropic/claude-sonnet-4-6` | What Mira ships with. |
 | Fastest reviews | `anthropic/claude-haiku-4-5` | Cheaper and faster. Good for low-stakes repos. |
-| Highest quality | `anthropic/claude-opus-4-6` | Strongest review, most expensive. |
+| Highest quality | `anthropic/claude-opus-4-8` | Strongest review, most expensive. |
 | OpenAI shop | `openai/gpt-5.1-codex` | Code-tuned. Or `openai/gpt-5.1-codex-mini` for cheap. |
-| Google shop | `google/gemini-2.5-pro` | Or `google/gemini-3-flash-preview` for cheap. |
+| Google shop | `google/gemini-3.1-pro-preview` | Or `google/gemini-3-flash-preview` for cheap. |
 
 Set it once via env var:
 
@@ -56,7 +56,7 @@ export MIRA_MODEL=anthropic/claude-sonnet-4-6
 
 ```yaml
 llm:
-  model: "openai/gpt-4o"
+  model: "openai/gpt-5.2"
 ```
 
 ## Splitting indexing and review
@@ -165,18 +165,51 @@ estimates and no "Recommended" badge. Highlights:
 | --- | --- | --: | --: | :-: | :-: |
 | `anthropic/claude-haiku-4-5` | Anthropic | 200k | 64k | ✅ recommended | ✅ |
 | `anthropic/claude-sonnet-4-6` | Anthropic | 200k | 64k | — | ✅ recommended |
-| `anthropic/claude-opus-4-6` | Anthropic | 200k | 32k | — | ✅ |
+| `anthropic/claude-sonnet-5` | Anthropic | 1M | 128k | — | ✅ |
+| `anthropic/claude-opus-4-8` | Anthropic | 1M | 128k | — | ✅ |
+| `anthropic/claude-fable-5` | Anthropic | 1M | 128k | — | ✅ |
 | `openai/gpt-5-nano` | OpenAI | 400k | 128k | ✅ | — |
 | `openai/gpt-5-mini` | OpenAI | 400k | 128k | ✅ | ✅ |
 | `openai/gpt-5.1-codex-mini` | OpenAI | 400k | 100k | ✅ | ✅ |
 | `openai/gpt-5.1-codex` | OpenAI | 400k | 128k | — | ✅ |
-| `openai/gpt-4.1-mini` | OpenAI | 1M | 32k | ✅ | — |
-| `openai/gpt-4o-mini` | OpenAI | 128k | 16k | ✅ | — |
-| `openai/gpt-4o` | OpenAI | 128k | 16k | — | ✅ |
+| `openai/gpt-5.2` | OpenAI | 400k | 128k | — | ✅ |
 | `google/gemini-3-flash-preview` | Google | 1M | 65k | ✅ | ✅ |
 | `google/gemini-3.1-flash-lite` | Google | 1M | 65k | ✅ | — |
-| `google/gemini-2.5-flash` | Google | 1M | 65k | ✅ | — |
-| `google/gemini-2.5-pro` | Google | 1M | 65k | — | ✅ |
+| `google/gemini-3.1-pro-preview` | Google | 1M | 65k | — | ✅ |
+| `deepseek/deepseek-v4-flash` | DeepSeek | 1M | 16k | ✅ | — |
+| `deepseek/deepseek-v4-pro` | DeepSeek | 1M | 384k | — | ✅ |
+| `minimax/minimax-m3` | MiniMax | 1M | 512k | ✅ | ✅ |
+
+### Custom pricing and recommendations
+
+To give a custom model accurate cost estimates, a label, or a Recommended
+badge — e.g. DeepSeek or a local endpoint — point `MIRA_MODELS_JSON_PATH` at
+your own `models.json` (a volume mount works well). Its entries are **merged
+over** the bundled ones by model id, so you only list what you want to add or
+override:
+
+```bash
+MIRA_MODELS_JSON_PATH=/config/models.json
+```
+
+```jsonc
+// /config/models.json — copy an entry from the bundled file as a template
+{
+  "deepseek/deepseek-chat": {
+    "label": "DeepSeek Chat",
+    "provider": "openai",
+    "max_input_tokens": 64000,
+    "max_output_tokens": 8000,
+    "input_cost_per_1m": 0.27,
+    "output_cost_per_1m": 1.10,
+    "supports_json_mode": true,
+    "purposes": ["indexing", "review"]
+  }
+}
+```
+
+The file is read at startup; a missing or invalid file falls back to the
+bundled registry with a warning.
 
 ## Cost expectations
 

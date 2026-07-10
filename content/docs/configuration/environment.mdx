@@ -59,6 +59,7 @@ optional when GitLab is set. Full walkthrough: [Set up GitLab](/gitlab).
 | `OPENROUTER_API_KEY` | — | **Required.** Your OpenRouter key. |
 | `OPENAI_API_KEY` | — | Accepted as a fallback for `OPENROUTER_API_KEY`. Don't set both. |
 | `MIRA_MODEL` | `anthropic/claude-sonnet-4-6` | Deployment-wide default model. Per-repo `.mira.yaml` overrides this. See [Choosing a model](/configuration/models). |
+| `MIRA_MODELS_JSON_PATH` | *unset* (bundled registry) | Path to your own `models.json` to add custom models or override bundled pricing/labels/recommendations — entries merge over the bundled list by id. See [Custom pricing and recommendations](/configuration/models#custom-pricing-and-recommendations). |
 
 ## Database & storage
 

@@ -9,7 +9,7 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
-## 0.6.0 (unreleased — GitLab, on `feature/add-gitlab-integration`)
+## 0.6.0 (2026-07-09)
 
 ### Added
 
@@ -38,6 +38,12 @@ this page mirrors it.
 
 - **Learnings quarantine — approve before they apply.** Auto-synthesized learnings (from accept/reject signals and human review comments) now land in a pending state and only inject into reviews once approved on the Learnings page. Declining a learning suppresses it permanently — future feedback keeps its evidence count fresh but can't resurrect it. Existing learnings are grandfathered as approved, so upgrading changes nothing until you triage.
 - **Learnings are editable and deletable.** Reword a learning's rule text inline (manual edits survive re-synthesis) or delete it outright; a deleted learning can return as pending if the same feedback pattern re-emerges. Declined learnings sit in a collapsed section with one-click restore.
+- **Newest frontier models in the registry.** Claude Sonnet 5, Claude Opus 4.8, Claude Fable 5, GPT-5.2, Gemini 3.1 Pro Preview, DeepSeek V4 Flash/Pro, and MiniMax M3, with pricing and ids verified against the live OpenRouter catalog.
+
+### Changed
+
+- **Superseded registry entries removed.** GPT-4o and GPT-4o mini, GPT-4.1 Mini, Gemini 2.5 Flash/Pro, MiniMax M2.7, and the OpenRouter Claude Opus 4.6 id (the Bedrock profile remains). Deployments still configured with these keep working — the dashboard accepts any id the configured backend serves; they just lose curated pricing metadata.
+- **Recommended defaults unchanged.** Claude Sonnet 4.6 for reviews and Claude Haiku 4.5 for indexing were benchmarked on the review-quality baseline and keep the badge until a newer model measurably beats them.
 
 ## 0.4.1 (2026-07-06)
 
