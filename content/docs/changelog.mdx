@@ -9,7 +9,7 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
-## 0.6.0 (2026-07-09)
+## 0.6.0 (2026-07-10)
 
 ### Added
 
@@ -24,6 +24,10 @@ this page mirrors it.
 ### Fixed
 
 - **Malformed LLM JSON is recovered instead of dropped.** Responses that leak tool-call XML or arrive with an unbalanced brace are repaired before parsing, so a chunk's comments are no longer lost when output strays from clean JSON.
+- **Stale PostgreSQL connections after idle.** Long-lived psycopg handles can go dead behind poolers or `idle_session_timeout`; queries now retry once on `OperationalError` (dashboard API, indexing, vulnerability poller) instead of failing.
+- **`/health` reflects Postgres availability.** When `DATABASE_URL` is Postgres, the endpoint runs a one-shot `SELECT 1` and returns HTTP 503 if the database is unreachable.
+- **Creating or editing a learning requires authentication.** The learned-rule create and update endpoints return 401 for unauthenticated requests instead of proceeding with an anonymous author.
+- **Dashboard setup and repo sync respect a repo's platform.** Setup writes index mode and status to the correct `(platform, owner, repo)` row (GitLab repos could previously not be opted out of initial indexing), and the GitHub repo sync no longer targets GitLab rows when pruning stale repos.
 
 ## 0.5.1 (2026-07-09)
 
