@@ -3,10 +3,11 @@ title: Introduction
 description: The open-source AI code reviewer that reviews your pull requests with the LLM of your choice.
 ---
 
-Mira is a self-hostable, fully open-source AI code reviewer. It runs as a
-GitHub App, watches your pull requests, and posts concise inline comments and
-walkthroughs using the LLM of your choice: Anthropic, OpenAI, Google, DeepSeek,
-or anything else available through [OpenRouter](https://openrouter.ai).
+Mira is a self-hostable, fully open-source AI code reviewer. It connects to
+GitHub or GitLab, watches your pull and merge requests, and posts concise
+inline comments and walkthroughs using the LLM of your choice: Anthropic,
+OpenAI, Google, DeepSeek, or anything else available through
+[OpenRouter](https://openrouter.ai).
 
 Everything is included: the review engine, codebase indexing, vulnerability
 scanning, custom rules, org-wide package search, the dashboard, and the
@@ -44,7 +45,8 @@ learning loop. There's no paid tier and no license key to buy.
 
 <Cards>
   <Card title="Quickstart" href="/quickstart" description="Deploy Mira and review your first PR in under 10 minutes." />
-  <Card title="Install the GitHub App" href="/installation" description="Create the GitHub App, configure permissions, generate the private key." />
+  <Card title="Set up GitHub" href="/github" description="Create the GitHub App, configure permissions, generate the private key." />
+  <Card title="Set up GitLab" href="/gitlab" description="Connect a group or project access token and a webhook — full parity with GitHub." />
   <Card title="Configuration" href="/configuration" description="Tune Mira per repo with .mira.yaml and per deployment with environment variables." />
   <Card title="Deployment" href="/deployment" description="Docker, Railway, Fly.io, Render — all powered by the same image." />
   <Card title="Features" href="/features" description="The full surface: review engine, indexing, security, custom rules, learning." />

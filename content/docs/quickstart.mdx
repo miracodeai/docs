@@ -1,11 +1,11 @@
 ---
 title: Quickstart
-description: Deploy Mira, install it on a repository, and watch it review your first pull request.
+description: Deploy Mira, connect GitHub or GitLab, and watch it review your first pull request.
 ---
 
 This guide takes you from zero to a Mira review on a real PR in about ten
-minutes. You'll pick a deployment target, install the GitHub App, and then
-open a PR.
+minutes. You'll pick a deployment target, connect GitHub or GitLab, and then
+open a pull request.
 
 ## 1. Get an OpenRouter API key
 
@@ -16,28 +16,55 @@ Anthropic, OpenAI, Google, DeepSeek, and more.
 2. Generate a key. The free tier is enough to test Mira on a few PRs.
 3. Save it as `OPENROUTER_API_KEY`.
 
-## 2. Create a GitHub App
+## 2. Connect GitHub or GitLab
 
-Mira runs as a GitHub App that auto-reviews every PR.
+Pick your platform — or do both; one Mira deployment can review on each at
+the same time.
 
-<Callout type="info">
-  The detailed walkthrough is in [Install the GitHub App](/installation).
-  The summary below is the minimum required to start a deployment.
-</Callout>
+<Tabs items={['GitHub', 'GitLab']}>
+  <Tab value="GitHub">
+    Mira runs as a GitHub App that auto-reviews every PR.
 
-At [github.com/settings/apps/new](https://github.com/settings/apps/new):
+    <Callout type="info">
+      The detailed walkthrough is in [Set up GitHub](/github).
+      The summary below is the minimum required to start a deployment.
+    </Callout>
 
-- **Webhook URL**: `https://your-server.com/github/webhook` (you'll fill this
-  in once you've deployed in step 3; you can come back and edit it).
-- **Webhook secret**: generate any 32+ byte random string and save it as
-  `MIRA_WEBHOOK_SECRET`.
-- **Permissions**: Pull Requests (read & write), Contents (read & write),
-  Issues (read & write), Metadata (read). Contents needs **write** (not just
-  read) so Mira can auto-resolve review threads — GitHub requires it.
-- **Events**: Pull request, Issue comment, Push, Installation.
-- **Private key**: generate a `.pem` and download it.
+    At [github.com/settings/apps/new](https://github.com/settings/apps/new):
 
-Note your **App ID** (numeric, top of the app settings page).
+    - **Webhook URL**: `https://your-server.com/github/webhook` (you'll fill this
+      in once you've deployed in step 3; you can come back and edit it).
+    - **Webhook secret**: generate any 32+ byte random string and save it as
+      `MIRA_WEBHOOK_SECRET`.
+    - **Permissions**: Pull Requests (read & write), Contents (read & write),
+      Issues (read & write), Metadata (read). Contents needs **write** (not just
+      read) so Mira can auto-resolve review threads — GitHub requires it.
+    - **Events**: Pull request, Issue comment, Push, Installation.
+    - **Private key**: generate a `.pem` and download it.
+
+    Note your **App ID** (numeric, top of the app settings page).
+  </Tab>
+  <Tab value="GitLab">
+    GitLab has no app-install model — Mira uses a **group or project access
+    token** plus a **webhook** instead.
+
+    <Callout type="info">
+      The detailed walkthrough is in [Set up GitLab](/gitlab).
+      The summary below is the minimum required to start a deployment.
+    </Callout>
+
+    - **Access token**: at **Group → Settings → Access tokens** (or per
+      project), create a token with role `Developer` or higher and scope
+      `api`. Save it as `MIRA_GITLAB_TOKEN`.
+    - **Webhook**: at **Settings → Webhooks → Add new webhook**, set the URL
+      to `https://your-server.com/gitlab/webhook` (you'll fill this in once
+      you've deployed in step 3), set the secret token to a random 32+ byte
+      string saved as `MIRA_GITLAB_WEBHOOK_SECRET`, and enable the **Merge
+      request events**, **Comments**, and **Push events** triggers.
+    - **Self-managed instance?** Also set `MIRA_GITLAB_API_URL` to your API
+      base, e.g. `https://gitlab.acme.com/api/v4`.
+  </Tab>
+</Tabs>
 
 ## 3. Deploy Mira
 
@@ -56,7 +83,15 @@ Pick the path that fits your stack. Each deploys the same `ghcr.io/miracodeai/mi
       ghcr.io/miracodeai/mira:latest
     ```
 
-    See [Deploying with Docker](/deployment/docker) for volume mounts,
+    On GitLab, swap the three GitHub lines for your GitLab credentials:
+
+    ```bash
+      -e MIRA_GITLAB_TOKEN=glpat-... \
+      -e MIRA_GITLAB_WEBHOOK_SECRET=your-secret \
+    ```
+
+    Set both platforms' credentials to review on both. See
+    [Deploying with Docker](/deployment/docker) for volume mounts,
     Postgres, and TLS.
   </Tab>
   <Tab value="Railway">
@@ -77,19 +112,23 @@ Pick the path that fits your stack. Each deploys the same `ghcr.io/miracodeai/mi
 Once the service is running, hit `https://your-server.com/health` and you
 should get a `200`.
 
-## 4. Point the GitHub App at your deployment
+## 4. Point the webhook at your deployment
 
-Go back to your GitHub App's settings and set the webhook URL to
-`https://your-server.com/github/webhook`. Save.
+- **GitHub**: back in your GitHub App's settings, set the webhook URL to
+  `https://your-server.com/github/webhook`. Save.
+- **GitLab**: back in **Settings → Webhooks**, edit the webhook so its URL is
+  `https://your-server.com/gitlab/webhook`. Save.
 
-## 5. Install the app on a repository
+## 5. Connect a repository
 
-From the app's public install page, choose a repo (or "All repositories") and
-install.
+- **GitHub**: from the app's public install page, choose a repo (or "All
+  repositories") and install.
+- **GitLab**: nothing to install — every project covered by the token and
+  webhook registers itself with Mira the first time an MR event arrives.
 
 ## 6. Open a pull request
 
-Mira will:
+Open a PR (or a merge request on GitLab) and Mira will:
 
 1. Index the repository in the background (one time, takes a few minutes for a
    small repo).
