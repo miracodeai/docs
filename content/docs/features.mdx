@@ -25,6 +25,12 @@ This is how Mira reviews a pull request.
   parallel (`max_concurrent_chunks`).
 - **Dedupe.** Comments that repeat across chunks and files are collapsed using
   Jaccard similarity on their titles and bodies.
+- **Cross-PR overlap detection.** While reviewing a PR, Mira compares it
+  against the repo's other open PRs and flags ones stepping on it — same files
+  (merge-conflict risk) or same goal (duplicate effort) — in the walkthrough.
+  A cheap deterministic pre-filter runs first, so only genuine candidates cost
+  an LLM call. Tune or disable via `review.overlap` in
+  [configuration](/configuration/global-config).
 - **GitHub suggestion blocks.** Actionable fixes are posted as suggestion
   blocks the author can accept in one click.
 - **Confidence clamping.** A single `blocker` finding forces an overall "Do
@@ -134,10 +140,18 @@ Mira gets better over time without you having to write rules yourself.
 - **GitHub App.** Auto-reviews every PR.
 - **GitLab.** Auto-reviews every merge request with full feature parity, via a
   group or project access token. See [Set up GitLab](/gitlab).
+- **Forgejo / Codeberg.** Auto-reviews pull requests via an access token and
+  webhook. See [Set up Forgejo](/forgejo).
 - **Self-managed / Enterprise.** Point
   [`MIRA_GITHUB_API_URL`](/configuration/environment#github-app) at GitHub
-  Enterprise Server, or [`MIRA_GITLAB_API_URL`](/configuration/environment#gitlab)
-  at a self-managed GitLab instance.
+  Enterprise Server, [`MIRA_GITLAB_API_URL`](/configuration/environment#gitlab)
+  at a self-managed GitLab instance, or
+  [`MIRA_FORGEJO_API_URL`](/configuration/environment#forgejo) at a self-hosted
+  Forgejo.
+- **Author allow/deny lists.** Restrict auto-review to certain PR authors
+  (`filter.allowed_authors`) or exclude bots and specific authors
+  (`filter.blocked_authors`) — the blocklist wins, and a `dependabot` entry
+  matches `dependabot[bot]`.
 - **Chat with the bot.** Mention `@miracodeai <question>` on any PR or MR thread
   and the bot answers using the indexed code as context.
 - **Cancel in-progress indexing.** Stop a long-running indexing job from the
@@ -169,6 +183,17 @@ doesn't match a command falls through to the free-form Q&A handler.
   the last-indexed timestamp.
 - **Cost estimates.** Estimated indexing spend per repo.
 - **Review event stream.** A live feed for troubleshooting.
+- **Review page (admin).** Stale and waiting PRs (how long open, how long
+  idle, who they're waiting on), a reviewer-responsiveness leaderboard
+  (pending queue + median time to respond), throughput trends
+  (time-to-first-review and time-to-merge, this week vs last), rubber-stamp
+  detection (approvals with no substantive review), and an open-PR status
+  board. Captured live from webhooks; seeded by a GitHub backfill on repo
+  add, admin **Refresh**, or the `mira backfill-contributors` CLI.
+- **Contributor analytics.** Per-contributor authoring stats (commits, PRs,
+  lines), a year-long contribution heatmap, and a review-quality signal —
+  blockers/warnings their PRs triggered plus the accept rate of Mira's
+  feedback.
 
 ## Storage and deployment
 

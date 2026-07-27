@@ -69,6 +69,11 @@ filter:
     - "*.min.js"
     - "*.svg"
     - "*.png"
+  # Only auto-review PRs from these authors (empty = review all).
+  allowed_authors: []
+  # Never auto-review PRs from these authors; wins over allowed_authors.
+  # "dependabot" also matches "dependabot[bot]".
+  blocked_authors: []
 
 review:
   context_lines: 3
@@ -88,6 +93,12 @@ review:
   jit_java_go: true
   ensemble_runs: 1
   ensemble_temperature: 0.3
+  auto_resolve_conversations: true
+  overlap:
+    enabled: true
+    max_candidates: 20
+    confidence_floor: 0.6
+    title_similarity_threshold: 0.4
 
 index:
   max_file_size: 1048576
@@ -189,6 +200,8 @@ goal is "every comment is one you'd want to land."
 | `exclude_patterns` | string[] | lockfiles, minified, images, fonts, archives | Glob patterns of files Mira should never review. Also applied to indexing — a file matching one of these is skipped by both the reviewer and the indexer (on top of the built-in skip list). |
 | `exclude_deleted` | bool | `true` | Skip files removed by the diff; they aren't there to comment on. |
 | `max_files` | int | `50` | Cap on files reviewed in a single PR. PRs above this are partially reviewed; the skipped files appear in the walkthrough. |
+| `allowed_authors` | string[] | `[]` | If non-empty, only PRs from these authors are auto-reviewed. Empty = review all. Applies to PR events, `@mention` commands, and push-triggered indexing; an explicit `@miracodeai review` bypasses the filter. |
+| `blocked_authors` | string[] | `[]` | Never auto-review PRs from these authors. Takes precedence over `allowed_authors`. A trailing `[bot]` is stripped for matching, so `dependabot` matches `dependabot[bot]`. |
 
 <Callout type="info">
   A `blocker` severity comment auto-clamps the overall confidence and forces a
@@ -219,6 +232,22 @@ Controls *how* Mira reviews: diff sizing, walkthrough behaviour, parallelism.
 | `jit_java_go` | bool | `true` | JIT cross-file resolver attempts Java + Go imports. Go resolves deterministically when a `go.mod` is present; Java is heuristic. Toggle off to A/B test impact. |
 | `ensemble_runs` | int (1–5) | `1` | Thorough mode: review each chunk N times in parallel and keep only majority-vote findings. Variance-driven false positives flicker across runs; real findings recur. `1` = off. Token cost multiplies by N; wall clock stays roughly flat. |
 | `ensemble_temperature` | float (0.0–1.0) | `0.3` | Sampling temperature for the extra ensemble runs (the first run keeps `llm.temperature`). Mild diversity makes the vote meaningful. |
+| `auto_resolve_conversations` | bool | `true` | Auto-resolve bot review threads the LLM verifies as fixed on each review pass. Disable to leave all bot comments open until a human resolves them (user-initiated reject/resolve replies still work). |
+
+### `review.overlap`
+
+Cross-PR overlap detection — while reviewing a PR, Mira compares it against
+the repo's other open PRs and flags ones stepping on it in the walkthrough:
+same files (merge-conflict risk) or same goal (duplicate effort). A cheap
+deterministic pre-filter runs first, so only genuinely-overlapping candidates
+cost an LLM call; stacked branches and draft PRs are excluded.
+
+| Key | Type | Default | Description |
+| --- | --- | --- | --- |
+| `enabled` | bool | `true` | Turn overlap detection off entirely. |
+| `max_candidates` | int (1–100) | `20` | How many recently-updated open PRs to compare against — bounds API calls and LLM cost on busy repos. |
+| `confidence_floor` | float (0.0–1.0) | `0.6` | Overlap verdicts the LLM scores below this are dropped. |
+| `title_similarity_threshold` | float (0.0–1.0) | `0.4` | A candidate sharing no files/symbols with the PR is kept only if its title is at least this similar (the duplicate-effort lane). |
 
 ## `index`
 

@@ -1,0 +1,75 @@
+---
+title: Set up Forgejo
+description: Connect Mira to Forgejo or Codeberg with an access token and a webhook — the same review pipeline as GitHub and GitLab.
+---
+
+Mira reviews Forgejo pull requests with the same feature set as GitHub and
+GitLab: inline comments, `@mention` commands, pause/resume, incremental
+re-review, indexing, and merge-time learning. Like GitLab, Forgejo has no
+app-install model — you give Mira an **access token** and point a **webhook**
+at your deployment.
+
+<Callout type="info">
+  [Codeberg](https://codeberg.org) works out of the box (it's the default API
+  endpoint). For a self-hosted Forgejo instance, set `MIRA_FORGEJO_API_URL` to
+  your instance's API base (e.g. `https://git.acme.com/api/v1`). Gitea
+  instances are API-compatible and generally work too.
+</Callout>
+
+## 1. Create an access token
+
+In Forgejo, go to **Settings → Applications → Generate new token** (on the
+account Mira should post as — a dedicated bot account keeps threads tidy):
+
+| Field | Value |
+| --- | --- |
+| **Token name** | Anything, e.g. `mira`. |
+| **Permissions** | `repository`: **Read and write** (post reviews, comments, labels), `user`: **Read**. |
+
+Copy the token — it's shown once. The token's user is who Mira posts as, and
+how it recognizes its own past comments for dedup and thread handling.
+
+## 2. Add a webhook
+
+On the repository (or organization, to cover every repo), go to
+**Settings → Webhooks → Add webhook → Forgejo**:
+
+| Field | Value |
+| --- | --- |
+| **Target URL** | `https://your-server.com/forgejo/webhook` |
+| **HTTP method** | `POST` |
+| **Secret** | A random 32+ byte string. Save it as `MIRA_FORGEJO_WEBHOOK_SECRET`. |
+| **Trigger on** | **Pull request** events (auto-review on open / new commits), **Issue comment** events (`@mention` commands and replies), **Push** events (keeps the index fresh). |
+
+Forgejo signs each delivery with HMAC-SHA256 in the `X-Forgejo-Signature`
+header; Mira verifies every request against `MIRA_FORGEJO_WEBHOOK_SECRET`.
+
+## 3. Configure Mira
+
+Set the Forgejo environment variables (see the full
+[environment reference](/configuration/environment)):
+
+```bash
+export MIRA_FORGEJO_TOKEN=…                    # the access token from step 1
+export MIRA_FORGEJO_WEBHOOK_SECRET=…           # matches the webhook secret
+# Self-hosted only (defaults to Codeberg):
+export MIRA_FORGEJO_API_URL=https://git.acme.com/api/v1
+```
+
+GitHub and GitLab credentials are **optional** when Forgejo is configured —
+set any one platform, or any combination. `mira serve` exposes a webhook
+route per configured platform (`/github/webhook`, `/gitlab/webhook`,
+`/forgejo/webhook`) and reviews repos on each.
+
+Mira's `@mention` handle is auto-detected from the token user's username; set
+`MIRA_BOT_NAME` to override it. A teammate can mention either name.
+
+## 4. Open a pull request
+
+A repository becomes known to Mira the first time it sees a PR for it — Mira
+registers it automatically, so it shows up in the dashboard ready to
+[index](/features#indexing). Open or update a PR and Mira posts a walkthrough
+and inline review.
+
+All [commands](/commands) work the same as on GitHub:
+`@miracodeai review`, `pause` / `resume`, `reject`, and free-form questions.

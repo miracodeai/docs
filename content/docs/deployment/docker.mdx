@@ -244,6 +244,23 @@ Create the tunnel in the Cloudflare Zero Trust dashboard, point it at
 `http://mira:8000`, and Cloudflare handles HTTPS at the edge, with no Let's
 Encrypt or nginx config on your end.
 
+### Proxy headers and the session cookie
+
+Mira marks the dashboard session cookie `Secure` when it sees the request
+arrive over HTTPS. Behind a reverse proxy that means the proxy must send
+`X-Forwarded-Proto` (Caddy, nginx with the config above, and Cloudflare all
+do), and Mira must trust the proxy's address. Proxies on the same host
+(`127.0.0.1`) are trusted out of the box; if the proxy runs elsewhere — e.g.
+a Caddy or cloudflared *container* — tell Mira to trust it:
+
+```bash
+# in Mira's environment (.env)
+FORWARDED_ALLOW_IPS=*
+```
+
+Use the proxy's actual IP instead of `*` if Mira's port is reachable by
+anything other than the proxy.
+
 ## Image versions
 
 | Tag | What you get |

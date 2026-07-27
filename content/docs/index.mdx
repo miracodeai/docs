@@ -4,9 +4,9 @@ description: The open-source AI code reviewer that reviews your pull requests wi
 ---
 
 Mira is a self-hostable, fully open-source AI code reviewer. It connects to
-GitHub or GitLab, watches your pull and merge requests, and posts concise
-inline comments and walkthroughs using the LLM of your choice: Anthropic,
-OpenAI, Google, DeepSeek, or anything else available through
+GitHub, GitLab, or Forgejo, watches your pull and merge requests, and posts
+concise inline comments and walkthroughs using the LLM of your choice:
+Anthropic, OpenAI, Google, DeepSeek, or anything else available through
 [OpenRouter](https://openrouter.ai).
 
 Everything is included: the review engine, codebase indexing, vulnerability
@@ -32,10 +32,10 @@ learning loop. There's no paid tier and no license key to buy.
 
 ## Coming soon
 
-- **More git providers.** GitHub and GitLab are both fully supported today;
-  Bitbucket and Gitea adapters are on the way. The platform layer is data, not
-  code — each host is a registry entry plus one provider class — so the engine,
-  indexer, and dashboard stay provider-agnostic.
+- **More git providers.** GitHub, GitLab, and Forgejo (incl. Codeberg) are
+  fully supported today; a Bitbucket adapter is on the way. The platform layer
+  is data, not code — each host is a registry entry plus one provider class —
+  so the engine, indexer, and dashboard stay provider-agnostic.
 - **Direct LLM backends.** Native adapters for Anthropic, OpenAI, Google
   Vertex, Ollama, and vLLM will sit alongside OpenRouter. These help when you
   already hold provider keys, run open-weights models in-house, or have
@@ -47,6 +47,7 @@ learning loop. There's no paid tier and no license key to buy.
   <Card title="Quickstart" href="/quickstart" description="Deploy Mira and review your first PR in under 10 minutes." />
   <Card title="Set up GitHub" href="/github" description="Create the GitHub App, configure permissions, generate the private key." />
   <Card title="Set up GitLab" href="/gitlab" description="Connect a group or project access token and a webhook — full parity with GitHub." />
+  <Card title="Set up Forgejo" href="/forgejo" description="Connect Forgejo or Codeberg with an access token and a webhook." />
   <Card title="Configuration" href="/configuration" description="Tune Mira per repo with .mira.yaml and per deployment with environment variables." />
   <Card title="Deployment" href="/deployment" description="Docker, Railway, Fly.io, Render — all powered by the same image." />
   <Card title="Features" href="/features" description="The full surface: review engine, indexing, security, custom rules, learning." />

@@ -49,7 +49,10 @@ custom platforms, configure `/health` as the readiness/liveness probe.
 ## Required environment variables
 
 Regardless of host, these must be set (full list at
-[Environment variables](/configuration/environment)):
+[Environment variables](/configuration/environment)). The GitHub trio below
+swaps for `MIRA_GITLAB_TOKEN` + `MIRA_GITLAB_WEBHOOK_SECRET` on GitLab, or
+`MIRA_FORGEJO_TOKEN` + `MIRA_FORGEJO_WEBHOOK_SECRET` on Forgejo — any one
+platform is enough:
 
 ```bash
 MIRA_GITHUB_APP_ID

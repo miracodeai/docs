@@ -9,6 +9,23 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
+## 0.7.0 (2026-07-24)
+
+### Added
+
+- **Forgejo support.** Mira now auto-reviews pull requests on Forgejo (including Codeberg, the default endpoint) with the same pipeline as GitHub and GitLab: inline comments, walkthroughs, `@mention` commands, push-triggered incremental indexing, and automatic repo discovery. Authentication is an access token — set `MIRA_FORGEJO_TOKEN` + `MIRA_FORGEJO_WEBHOOK_SECRET` and point a webhook at `/forgejo/webhook`; self-hosted instances set `MIRA_FORGEJO_API_URL`. Any combination of platforms works. See [Set up Forgejo](/forgejo).
+- **Cross-PR overlap detection.** While reviewing a PR, Mira compares it against the repo's other open PRs and flags the ones stepping on it in the walkthrough — same files (**merge-conflict risk**) or same goal (**duplicate effort**). A cheap deterministic pre-filter runs first, so only genuine candidates cost a single batched LLM call. Tune or disable under [`review.overlap`](/configuration/global-config#reviewoverlap).
+- **PR author allow / deny lists.** `filter.allowed_authors` restricts auto-review to the named authors and `filter.blocked_authors` always wins over it — handy for muting bots (`dependabot` matches `dependabot[bot]`). An explicit `@miracodeai review` still works on a filtered author's PR.
+- **Review dashboard.** A new admin-only **Review** page focused on keeping a human in the loop on PR reviews: stale / waiting PRs (how long open, how long idle, who they're waiting on), a **reviewer-responsiveness leaderboard** that surfaces the bottleneck (pending review queue + median time to respond once requested), throughput trends (median time-to-first-review and time-to-merge, this week vs last), an approved-&-merged count, **rubber-stamp detection** (approvals with no substantive review — empty/"LGTM" body and no real inline comments — surfaced org-wide and per reviewer), and an open-PR status board (approved / changes-requested / awaiting). Review timing is captured live from webhooks and seeded by a light GitHub backfill of open PRs + existing reviews on repo add, admin **Refresh**, or the `mira backfill-contributors` CLI.
+- **Contribution analytics.** Each contributor's detail page also shows authoring stats (commits, PRs opened/merged, lines), a GitHub-style year-long contribution heatmap, and Mira's differentiated **review-quality** signal (blockers/warnings their PRs triggered + the accept rate of Mira's feedback). Contributors are keyed provider-agnostically `(provider, login)` so non-GitHub providers can be added later.
+- **Threaded PR activity timeline.** Review comments and the human replies to them are stored, and the dashboard's Activity detail renders them as threaded conversations grouped under each review pass — replies nested under the exact Mira comment they answer, newest first.
+
+### Fixed
+
+- **Review comments always anchor to the PR's own diff.** A merge commit's round-2 incremental diff no longer drags in the base branch's changes, and inline comments that GitHub can't anchor (lines outside the PR diff) are dropped before posting with the Key Issues table re-synced — no more 🔴 rows with no inline comment attached.
+- **Postgres writes for review comments and PR replies survive stale connections** — two write paths missed by 0.6.0's reconnecting-cursor fix now route through it.
+- **Long learned-rule text truncates with an ellipsis** in the dashboard's pending-learnings card instead of overflowing.
+
 ## 0.6.0 (2026-07-10)
 
 ### Added

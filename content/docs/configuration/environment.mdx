@@ -17,8 +17,8 @@ for things you don't want in a checked-in YAML file. `MIRA_MODEL` and
 ## Required at minimum
 
 `OPENROUTER_API_KEY` is always required, plus credentials for **at least one**
-platform — GitHub, GitLab, or both. `mira serve` won't start without one
-platform configured.
+platform — GitHub, GitLab, or Forgejo, in any combination. `mira serve` won't
+start without one platform configured.
 
 | Variable | Description |
 | --- | --- |
@@ -28,6 +28,8 @@ platform configured.
 | `MIRA_WEBHOOK_SECRET` | **GitHub:** random 32+ byte string. Must match the value you set in the GitHub App's webhook settings. |
 | `MIRA_GITLAB_TOKEN` | **GitLab:** a group or project access token with the `api` scope. See the [GitLab setup guide](/gitlab). |
 | `MIRA_GITLAB_WEBHOOK_SECRET` | **GitLab:** secret token, matching the one set on the project/group webhook. |
+| `MIRA_FORGEJO_TOKEN` | **Forgejo:** an access token with repository read/write. See the [Forgejo setup guide](/forgejo). |
+| `MIRA_FORGEJO_WEBHOOK_SECRET` | **Forgejo:** webhook secret, matching the one set on the repo/org webhook. |
 
 ## GitHub App
 
@@ -51,6 +53,18 @@ optional when GitLab is set. Full walkthrough: [Set up GitLab](/gitlab).
 | `MIRA_GITLAB_WEBHOOK_SECRET` | — | **Required for GitLab.** Secret token compared against each webhook's `X-Gitlab-Token`. |
 | `MIRA_GITLAB_API_URL` | `https://gitlab.com/api/v4` | API base for self-managed instances, e.g. `https://gitlab.acme.com/api/v4`. |
 | `MIRA_BOT_NAME` | *auto-detected from the token user* | Shared with GitHub. Override the bot `@mention` handle; otherwise Mira reads the token user's username at startup. |
+
+## Forgejo
+
+Configure these to review Forgejo (or Codeberg) pull requests. GitHub and
+GitLab variables become optional when Forgejo is set. Full walkthrough:
+[Set up Forgejo](/forgejo).
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_FORGEJO_TOKEN` | — | **Required for Forgejo.** Access token with repository read/write. The token's user is who Mira comments as. |
+| `MIRA_FORGEJO_WEBHOOK_SECRET` | — | **Required for Forgejo.** HMAC-SHA256 secret compared against each webhook's `X-Forgejo-Signature`. |
+| `MIRA_FORGEJO_API_URL` | `https://codeberg.org/api/v1` | API base for self-hosted instances, e.g. `https://git.acme.com/api/v1`. |
 
 ## LLM
 
@@ -105,7 +119,7 @@ control when Mira synthesizes a new rule from feedback signals.
 ## A complete `.env`
 
 ```bash
-# GitHub App (or use GitLab below — at least one platform required)
+# GitHub App (or use GitLab/Forgejo below — at least one platform required)
 export MIRA_GITHUB_APP_ID=123456
 export MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)"
 export MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
@@ -113,6 +127,10 @@ export MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
 # GitLab (alternative or in addition to GitHub)
 # export MIRA_GITLAB_TOKEN=glpat-your-access-token
 # export MIRA_GITLAB_WEBHOOK_SECRET=replace-with-32-bytes-of-random
+
+# Forgejo / Codeberg (alternative or in addition to the above)
+# export MIRA_FORGEJO_TOKEN=your-access-token
+# export MIRA_FORGEJO_WEBHOOK_SECRET=replace-with-32-bytes-of-random
 
 # LLM
 export OPENROUTER_API_KEY=sk-or-v1-your-key-here

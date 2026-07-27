@@ -16,12 +16,12 @@ Anthropic, OpenAI, Google, DeepSeek, and more.
 2. Generate a key. The free tier is enough to test Mira on a few PRs.
 3. Save it as `OPENROUTER_API_KEY`.
 
-## 2. Connect GitHub or GitLab
+## 2. Connect GitHub, GitLab, or Forgejo
 
-Pick your platform — or do both; one Mira deployment can review on each at
+Pick your platform — or several; one Mira deployment can review on each at
 the same time.
 
-<Tabs items={['GitHub', 'GitLab']}>
+<Tabs items={['GitHub', 'GitLab', 'Forgejo']}>
   <Tab value="GitHub">
     Mira runs as a GitHub App that auto-reviews every PR.
 
@@ -63,6 +63,25 @@ the same time.
       request events**, **Comments**, and **Push events** triggers.
     - **Self-managed instance?** Also set `MIRA_GITLAB_API_URL` to your API
       base, e.g. `https://gitlab.acme.com/api/v4`.
+  </Tab>
+  <Tab value="Forgejo">
+    Forgejo (and Codeberg) use an **access token** plus a **webhook**, like
+    GitLab.
+
+    <Callout type="info">
+      The detailed walkthrough is in [Set up Forgejo](/forgejo).
+      The summary below is the minimum required to start a deployment.
+    </Callout>
+
+    - **Access token**: at **Settings → Applications → Generate new token**,
+      grant `repository` read/write. Save it as `MIRA_FORGEJO_TOKEN`.
+    - **Webhook**: on the repo or org, **Settings → Webhooks → Add webhook →
+      Forgejo**, set the target URL to `https://your-server.com/forgejo/webhook`
+      (you'll fill this in once you've deployed in step 3), set the secret to a
+      random 32+ byte string saved as `MIRA_FORGEJO_WEBHOOK_SECRET`, and enable
+      **Pull request**, **Issue comment**, and **Push** events.
+    - **Self-hosted instance?** Also set `MIRA_FORGEJO_API_URL` to your API
+      base, e.g. `https://git.acme.com/api/v1` (defaults to Codeberg).
   </Tab>
 </Tabs>
 
