@@ -16,13 +16,15 @@ for things you don't want in a checked-in YAML file. `MIRA_MODEL` and
 
 ## Required at minimum
 
-`OPENROUTER_API_KEY` is always required, plus credentials for **at least one**
-platform — GitHub, GitLab, or Forgejo, in any combination. `mira serve` won't
-start without one platform configured.
+Credentials for **at least one** platform — GitHub, GitLab, or Forgejo — are
+required. LLM credentials depend on the backend: an OpenRouter/API key for the
+default OpenAI-compatible provider, the AWS credential chain for Bedrock, or a
+Codex login for `codex-cli`. `mira serve` won't start without one platform
+configured.
 
 | Variable | Description |
 | --- | --- |
-| `OPENROUTER_API_KEY` | Your [OpenRouter](https://openrouter.ai) key. (Mira also accepts `OPENAI_API_KEY` as a fallback name for backwards compatibility.) |
+| `OPENROUTER_API_KEY` | Your [OpenRouter](https://openrouter.ai) key when using the default provider. Mira also accepts `OPENAI_API_KEY` as a fallback name. Not required for Bedrock, Codex CLI, or a custom unauthenticated endpoint. |
 | `MIRA_GITHUB_APP_ID` | **GitHub:** numeric ID from your GitHub App settings page. |
 | `MIRA_GITHUB_PRIVATE_KEY` | **GitHub:** contents of the `.pem` file generated when you created the GitHub App. The CLI also accepts `@/path/to/key.pem` syntax. |
 | `MIRA_WEBHOOK_SECRET` | **GitHub:** random 32+ byte string. Must match the value you set in the GitHub App's webhook settings. |
@@ -70,10 +72,11 @@ GitLab variables become optional when Forgejo is set. Full walkthrough:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `OPENROUTER_API_KEY` | — | **Required.** Your OpenRouter key. |
+| `OPENROUTER_API_KEY` | — | Required for the default OpenRouter setup. Not used by Bedrock or Codex CLI. |
 | `OPENAI_API_KEY` | — | Accepted as a fallback for `OPENROUTER_API_KEY`. Don't set both. |
 | `MIRA_MODEL` | `anthropic/claude-sonnet-4-6` | Deployment-wide default model. Per-repo `.mira.yaml` overrides this. See [Choosing a model](/configuration/models). |
 | `MIRA_MODELS_JSON_PATH` | *unset* (bundled registry) | Path to your own `models.json` to add custom models or override bundled pricing/labels/recommendations — entries merge over the bundled list by id. See [Custom pricing and recommendations](/configuration/models#custom-pricing-and-recommendations). |
+| `CODEX_HOME` | Codex CLI default | Directory containing `auth.json` from `codex login` when `llm.provider: codex-cli`. Can instead be set with deployment-only `llm.codex_home`. Mount it read-only in containers. |
 
 ## Database & storage
 
@@ -86,9 +89,15 @@ GitLab variables become optional when Forgejo is set. Full walkthrough:
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `ADMIN_PASSWORD` | `admin` | Dashboard admin password. **Change this before exposing the dashboard.** |
+| `ADMIN_PASSWORD` | *unset* | Initial admin password. Leave unset and Mira generates a random one on first start and writes it to `<MIRA_INDEX_DIR>/initial_admin_password` (mode `0600`) — log in, change it, then delete the file. There is no built-in default account. |
 | `MIRA_DASHBOARD_URL` | *unset* | Public URL of the dashboard, used in PR comment links so reviewers can jump to context pages. |
 | `MIRA_UI_DIST` | `/app/ui_dist` (Docker) | Path to the built React UI. Don't change unless you're hacking on the UI. |
+
+## Outbound notifications
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_WEBHOOK_ALLOWED_HOSTS` | *unset* | Comma-separated hostnames that outbound notification webhooks may target even though they resolve to a private/internal address. By default any URL resolving to a private, loopback, link-local, reserved, or metadata address is blocked (SSRF guard); list a self-hosted Slack/Mattermost/etc. host here to allow it. |
 
 ## Server
 
@@ -139,7 +148,8 @@ export MIRA_MODEL=anthropic/claude-sonnet-4-6
 # Database (Postgres recommended for production; omit for SQLite)
 export DATABASE_URL=postgresql://mira:mira@db.internal:5432/mira?sslmode=require
 
-# Dashboard
+# Dashboard — omit ADMIN_PASSWORD to get a generated one written to
+# <MIRA_INDEX_DIR>/initial_admin_password on first start
 export ADMIN_PASSWORD=replace-me
 export MIRA_DASHBOARD_URL=https://mira.your-org.com
 ```

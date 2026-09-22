@@ -9,6 +9,83 @@ All notable changes to Mira are documented here. The format follows
 changelog lives at [`CHANGELOG.md` in the repo](https://github.com/miracodeai/mira/blob/main/CHANGELOG.md);
 this page mirrors it.
 
+## 0.9.1 (2026-09-22)
+
+### Added
+
+- **Codex CLI provider.** Deployments with an OpenAI Codex login can set `llm.provider: codex-cli` and run reviews without an HTTP API key. Each invocation gets an isolated temporary home and workspace, a minimal environment, and a read-only sandbox. See [Codex CLI](/configuration/models#codex-cli).
+- **PR-description summaries.** `review.pr_summary` can add an AI-generated release-notes block to a PR or MR description. `append` preserves author text and updates the marked block idempotently; `replace` intentionally replaces the body. The default is `disable`.
+- **`xhigh` review reasoning.** `llm.review_reasoning_effort` now accepts `xhigh` directly alongside `off`, `low`, `medium`, `high`, and `max`.
+- **Richer blast-radius reporting.** Walkthroughs show in-repository callers alongside cross-repository dependents, including source paths and referenced targets where available.
+- **Natural review-thread replies.** Mira can classify plain replies in its own GitHub review threads, answer questions, resolve disagreements, and avoid unnecessary acknowledgements when it was not mentioned.
+- **Draft-aware GitHub reviews.** Draft pull requests are skipped and reviewed when they become ready for review.
+
+### Changed
+
+- **More concise review output.** Inline findings use a compact severity-and-title header with shorter explanations, while walkthroughs focus on the overall summary, merge confidence, and optional sequence diagram instead of repeating per-file changes and effort estimates.
+- **Stricter noise filtering.** Security findings can use a category-specific confidence floor, and plausible blocker findings require at least 0.90 confidence.
+- **Fork-safe source lookup.** Review context and fix verification fetch pull-request content by head SHA when available.
+- **Generated review summaries are capped** so unusually verbose model output cannot overflow provider limits.
+
+### Fixed
+
+- **GitHub App tokens are resolved for each provider API call**, avoiding stale installation credentials in long-lived provider instances.
+- **Mermaid diagrams are hardened before posting.** Unsafe or malformed directives, labels, identifiers, edges, and excessive graph sizes are rejected or sanitized so a model-generated diagram cannot break the walkthrough.
+- **PR-description summaries are idempotent and gated.** Re-reviews update the existing marked block instead of duplicating it, and summary generation is skipped when the feature or walkthrough is disabled.
+- **Forgejo incremental diffs use the web compare URL**, fixing compare requests on instances where the API route does not expose the `.diff` representation.
+- **Outdated review threads are resolved before fix verification**, avoiding unnecessary LLM checks for comments whose diff anchors no longer exist.
+- **Merge-learning metadata survives the compact comment format** by preferring metadata recorded when comments were posted.
+
+## 0.9.0 (2026-08-27)
+
+### Added
+
+- **Layered security review.** A dedicated security-model tier combines a focused LLM pass, optional agentic `read_file` / `grep_repo` verification, a deterministic regex-and-entropy secrets scan, and review-time OSV checks for dependencies added or upgraded by a PR. The security model can be configured independently in `mira.yaml` or the Settings UI. See [Deployment config](/configuration/global-config#review).
+- **OpenAI Responses API support.** OpenAI-compatible providers can set `llm.api_style: responses` to use the `/responses` protocol instead of Chat Completions, including JSON output, tool calling, reasoning, fallback models, and usage accounting.
+- **Broader indexing support.** A shared file-type registry keeps review and indexing language detection consistent and adds Lua to the indexed languages.
+
+### Fixed
+
+- **Very large GitHub PRs remain reviewable.** When GitHub rejects the complete diff with HTTP 406, Mira reconstructs a unified diff from per-file patches, including valid added, removed, and renamed-file headers.
+- **Responses JSON mode includes the required object-output hint**, preventing compatible endpoints from rejecting walkthrough and review requests.
+- **Dashboard cards no longer clip overflowing content.**
+
+## 0.8.1 (2026-08-13)
+
+### Added
+
+- **Agentic tools on indexed repositories.** The main reviewer can use `read_file` and `grep_repo` even when an index already exists, allowing it to verify callers and dispatch paths beyond pre-fetched context.
+
+### Fixed
+
+- **Walkthrough parsing tolerates malformed model output**, including leaked tool-call XML, malformed optional fields, and incomplete JSON structures.
+- **Review failures update the in-progress placeholder comment** instead of leaving a PR appearing permanently stuck.
+- **Repository indexes remain platform-isolated** when the same owner/repository name exists on more than one provider.
+- **Incremental indexing reports the stored repository total** rather than only the number of files processed in the latest update.
+- **Large repository tarballs avoid out-of-memory extraction** by discarding non-indexable and oversized files before loading their contents.
+- **Contributor backfill uses PyGithub's current rate-limit API.**
+
+## 0.8.0 (2026-07-27)
+
+### Added
+
+- **Opt out of per-commit reviews.** `review.review_on_synchronize` (default `true`) controls whether every push to an open PR triggers a review. Turn it off and Mira only reviews on open/reopen — later commits wait for an explicit `@bot review`. Saves tokens and cuts noise when you batch commits before pushing. Works on GitHub, GitLab, and Forgejo; toggleable in Settings. See [`review.review_on_synchronize`](/configuration/global-config#review).
+- **Duplicate-dependency warnings.** A dependency-review pass flags when a PR adds a package that overlaps a dependency the repo already has (e.g. `react-table` present and the PR adds `@tanstack/react-table`). It runs only when the PR changes a manifest (`package.json`, `pyproject.toml`, `go.mod`, …), compares against the repo's indexed package names, tags findings `category=dependency`, and sends them through the normal noise filter and self-critique. Lockfiles are excluded. Gated by `review.dependency_overlap` (default on), admin-toggleable in Settings.
+- **Configurable LLM retry and timeout.** New `llm` keys — `max_retries`, `request_timeout`, `retry_min_wait`, `retry_max_wait` — read at runtime. Raise them for flex-tier models or proxied endpoints under load. See [`llm` retry & timeout](/configuration/global-config#llm).
+- **Concurrent-review de-duplication.** An in-memory review tracker skips starting a second review when one is already running for the same PR (rapid push + comment, webhook redeliveries), and surfaces in-flight status to the dashboard across all three platforms.
+
+### Changed
+
+- **LLM retries only fire on transient failures.** The retry predicate now covers timeouts, network errors, and 5xx/429 responses; 4xx client errors raise immediately instead of consuming the retry budget.
+
+### Security
+
+- **Webhook SSRF via DNS names is closed.** Outbound webhook delivery now resolves the target host and rejects it if any resolved address is private/loopback/link-local/reserved/metadata — previously only raw IP literals were screened. Allow specific internal hosts with `MIRA_WEBHOOK_ALLOWED_HOSTS`.
+- **No default admin password.** The dashboard no longer ships an `admin` / `admin` account. Unset `ADMIN_PASSWORD` → a random password generated on first start and written to `<MIRA_INDEX_DIR>/initial_admin_password` (mode `0600`), never logged. Password storage moves to PBKDF2-HMAC-SHA256 with per-user salts; old hashes upgrade on next login.
+- **Dashboard endpoints that were missing auth are gated.** GitLab/Forgejo sync + repo-register, model-settings update, uninstall keep/delete, and setup-complete now require an admin session.
+- **Public-path auth bypass narrowed.** The middleware treated the whole `/api/repos/` prefix and any `.svg` path as public; it now matches only the blast-radius badge exactly.
+- **Session cookie marked `Secure` over HTTPS**, and the **SPA static fallback no longer allows `../` traversal** out of the UI dist directory.
+
 ## 0.7.0 (2026-07-24)
 
 ### Added

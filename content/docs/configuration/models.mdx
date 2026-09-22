@@ -3,7 +3,7 @@ title: Choosing a model
 description: How OpenRouter routing works, when to split indexing and review models, and which models Mira recognizes.
 ---
 
-Mira can reach an LLM three ways:
+Mira can reach an LLM four ways:
 
 - **[OpenRouter](https://openrouter.ai)** (default) — one `OPENROUTER_API_KEY`
   covers Anthropic, OpenAI, Google, DeepSeek, and others. You pay your provider
@@ -15,15 +15,13 @@ Mira can reach an LLM three ways:
 - **[AWS Bedrock](#aws-bedrock)** — `llm.provider: "bedrock"` talks to Bedrock's
   Converse API directly, using the standard AWS credential chain. Good for teams
   with data-residency rules or existing AWS billing.
+- **[Codex CLI](#codex-cli)** — `llm.provider: "codex-cli"` uses an existing
+  OpenAI Codex login instead of an HTTP API key. Mira isolates every invocation
+  in a temporary home and read-only sandbox.
 
 The rest of this page uses OpenRouter-style `provider/model` strings, but the
 [indexing/review split](#splitting-indexing-and-review) and
 [fallback chain](#fallback-chain) work the same whichever backend you pick.
-
-<Callout type="info">
-  **On the roadmap:** native first-party adapters for **Anthropic**, **OpenAI**,
-  and **Google Vertex** (direct, without going through OpenRouter).
-</Callout>
 
 ## How `MIRA_MODEL` resolves
 
@@ -63,13 +61,18 @@ llm:
 
 Indexing reads every file in your repo to build summaries, so it benefits from a
 cheap, fast model. Review reasons over diffs and project context, so it benefits
-from a stronger model. You can split them:
+from a stronger model. The focused security pass can use its own high-trust
+model. You can split all three tiers:
 
 ```yaml
 llm:
   indexing_model: "anthropic/claude-haiku-4-5"
   review_model: "anthropic/claude-sonnet-4-6"
+  security_model: "anthropic/claude-sonnet-4-6"
 ```
+
+If `security_model` is unset it falls back to `review_model`, then `model`. It
+never silently falls back to the cheaper `indexing_model`.
 
 The dashboard's **Settings** page exposes the same split via searchable model
 pickers. They list your backend's live catalog (OpenRouter, Bedrock, or any
@@ -87,7 +90,7 @@ the Settings page:
 
 ```yaml
 llm:
-  review_reasoning_effort: "high"   # off | low | medium | high | max
+  review_reasoning_effort: "high"   # off | low | medium | high | xhigh | max
 ```
 
 It applies to reviews only (never indexing) and defaults to `off`.
@@ -95,10 +98,10 @@ It applies to reviews only (never indexing) and defaults to `off`.
 **Provider support.** Thinking mode is sent as OpenRouter's unified
 `reasoning.effort`, so it works out of the box on **OpenRouter** (DeepSeek,
 Claude, and OpenAI reasoning models) and on **Bedrock** for Claude (mapped to a
-thinking-token budget). `max` is DeepSeek's top level — on OpenRouter it's sent
-as `xhigh`, the equivalent there. On models or endpoints that don't support a
-reasoning effort, Mira drops it and reviews normally rather than failing, so
-turning it on is always safe.
+thinking-token budget). `xhigh` can be selected directly; provider profiles may
+also remap levels where an API uses different names (for example, mapping `max`
+to `xhigh`). On models or endpoints that don't support a reasoning effort, Mira
+drops it and reviews normally rather than failing, so turning it on is safe.
 
 ## Fallback chain
 
@@ -146,6 +149,51 @@ runtime.
   profiles and on-demand foundation models for the configured region — only ids
   your deployment can actually serve.
 </Callout>
+
+## Codex CLI
+
+If the deployment already has an OpenAI Codex login, Mira can run its model
+calls through the Codex CLI instead of an HTTP API key. Authenticate once with
+`codex login`, then use an operator-owned deployment config:
+
+```yaml
+# mira.yaml
+llm:
+  provider: "codex-cli"
+  model: "codex-default"      # keep the Codex CLI default model
+  codex_home: "/run/codex"    # optional; defaults to CODEX_HOME
+  codex_sandbox: "read-only"   # the only accepted sandbox policy
+  codex_timeout_seconds: 900
+```
+
+The official Mira image includes a pinned Codex CLI. Mount the login read-only:
+
+```bash
+docker run -p 8000:8000 --env-file .env \
+  -e CODEX_HOME=/run/codex \
+  -v "$HOME/.codex:/run/codex:ro" \
+  -v "$(pwd)/mira.yaml:/app/mira.yaml:ro" \
+  ghcr.io/miracodeai/mira:latest --config /app/mira.yaml
+```
+
+Mira copies only `auth.json` into a private, writable temporary Codex home for
+each invocation. Codex runs in an empty temporary workspace with a minimal
+environment, inherited shell variables and user/project rules disabled, and a
+read-only sandbox. No `OPENROUTER_API_KEY` is required.
+
+<Callout type="warning">
+  `provider`, the Codex executable and auth paths, sandbox policy, and timeout
+  are deployment-only settings. Repository `.mira.yaml` files cannot override
+  them. For one-shot `mira review` runs, only use
+  `--trust-execution-settings` with an operator-owned config, never a
+  repository-controlled file. Treat the mounted OAuth session as a sensitive
+  deployment credential and prefer a dedicated Codex account/session.
+</Callout>
+
+Codex CLI does not expose Mira's temperature or hard output-token controls, so
+Mira disables ensemble sampling for this provider. It also does not expose
+Mira's interactive tool-calling loop; cross-file context still comes from the
+normal index and JIT context collection.
 
 ## Model catalog
 

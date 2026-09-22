@@ -17,7 +17,15 @@ overrides without committing a file.
 Same as [`mira.yaml`](/configuration/global-config): `llm`, `filter`,
 `review`, `index`, every key optional. The
 [deployment-config reference](/configuration/global-config) documents every
-key; anything there is overridable here.
+key. Review behaviour is overridable here, but process-execution settings are
+not: `llm.provider`, `codex_command`, `codex_home`, `codex_sandbox`, and
+`codex_timeout_seconds` are stripped from repository-controlled config.
+
+<Callout type="warning">
+  Keep Codex CLI provider and execution settings in the operator-owned
+  deployment `mira.yaml`. A repository must not be able to select a local
+  executable or credential directory.
+</Callout>
 
 DB connection and dashboard auth have no per-repo equivalent; they're set
 deployment-wide via `DATABASE_URL` / `ADMIN_PASSWORD`

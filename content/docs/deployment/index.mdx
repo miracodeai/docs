@@ -58,8 +58,8 @@ platform is enough:
 MIRA_GITHUB_APP_ID
 MIRA_GITHUB_PRIVATE_KEY
 MIRA_WEBHOOK_SECRET
-OPENROUTER_API_KEY
-ADMIN_PASSWORD          # change from default before exposing dashboard
+OPENROUTER_API_KEY      # default LLM backend; omit for Bedrock or Codex CLI
+ADMIN_PASSWORD          # optional; generated securely on first start if unset
 MIRA_MODEL              # optional; defaults to anthropic/claude-sonnet-4-6
 DATABASE_URL            # optional; SQLite if unset
 MIRA_DASHBOARD_URL      # optional but recommended; appears in PR comment links
@@ -74,11 +74,14 @@ Before pointing real PRs at your deployment:
       or Cloudflare Tunnel. PaaS deploys ([Railway](/deployment/railway),
       [Fly](/deployment/fly), [Render](/deployment/render)) handle this for you.
 - [ ] `MIRA_WEBHOOK_SECRET` set to a long random value.
-- [ ] `ADMIN_PASSWORD` changed from `admin`.
+- [ ] Admin password rotated after first login. If `ADMIN_PASSWORD` was unset,
+      retrieve the generated value from
+      `<MIRA_INDEX_DIR>/initial_admin_password`, then delete that file.
 - [ ] Webhook URL in the GitHub App points at `https://your-host/github/webhook`.
 - [ ] If using Postgres: `?sslmode=require` in `DATABASE_URL`.
 - [ ] If using SQLite: `MIRA_INDEX_DIR` mounted as a persistent volume.
-- [ ] `OPENROUTER_API_KEY` and `MIRA_GITHUB_PRIVATE_KEY` stored in your
-      platform's secret manager, never in plain env files in source control.
+- [ ] LLM credentials (`OPENROUTER_API_KEY`, AWS credentials, or Codex OAuth)
+      and platform credentials such as `MIRA_GITHUB_PRIVATE_KEY` stored in your
+      secret manager, never in source-controlled env files.
 
 Full hardening guidance: [Security](/security).

@@ -14,13 +14,19 @@ This is how Mira reviews a pull request.
   `blocker`, `warning`, `suggestion`, or `nitpick` and carries a confidence
   score. The `filter` block in `.mira.yaml` controls which comments make it
   past the noise filter.
-- **PR walkthrough and summary comment.** A top-level comment with file
-  coverage, per-severity counts, and a Mermaid sequence diagram where it's
-  useful.
+- **PR walkthrough and summary comment.** A concise top-level overview with
+  merge confidence, review stats, blast radius, and a hardened Mermaid sequence
+  diagram where it adds value.
+- **PR-description release notes.** Optionally append an AI-generated
+  `Summary by Mira` block to the PR/MR description, or replace the description
+  entirely. Re-reviews update the existing marked block without duplicating it.
 - **Streaming.** A placeholder comment posts within about a second, the
   walkthrough within ten, and the full review within a minute.
 - **Multi-file reasoning.** Mira reasons across the whole diff rather than
   taking each file in isolation.
+- **Agentic verification.** The reviewer can call `read_file` and `grep_repo`
+  to verify callers and dispatch paths beyond pre-fetched context, whether or
+  not the repository already has an index.
 - **Parallel chunk review.** Large diffs are split into chunks and reviewed in
   parallel (`max_concurrent_chunks`).
 - **Dedupe.** Comments that repeat across chunks and files are collapsed using
@@ -60,10 +66,21 @@ diff.
 - **External reference tracking.** Mira tracks which external packages are
   used where.
 
-## Vulnerability scanning
+## Security and vulnerability scanning
 
-Mira watches for CVEs in every package across every repo.
+Mira combines model-based security review with deterministic scans.
 
+- **Focused security model.** A dedicated security pass looks for injection,
+  XSS, auth bypass, CSRF, SSRF, unsafe deserialization, and cryptographic
+  mistakes alongside the main review. Set `llm.security_model` independently
+  when this pass needs a different model.
+- **Cross-file verification.** The security pass can use `read_file` and
+  `grep_repo` before filing a finding, reducing speculative reports that depend
+  on code outside the diff.
+- **Added-line secret scan.** Regex and entropy checks catch committed keys,
+  tokens, and passwords locally, without an LLM or network request.
+- **Review-time OSV check.** Packages added or upgraded by a PR are checked in
+  one OSV.dev batch request, before the change merges.
 - **OSV.dev poll.** A background poll runs every hour, configurable via
   `MIRA_VULN_POLL_INTERVAL`.
 - **Severity coverage.** It surfaces critical, high, moderate, and low CVEs,
@@ -128,6 +145,10 @@ Mira gets better over time without you having to write rules yourself.
 
 - **OpenRouter routing.** One `OPENROUTER_API_KEY` covers Anthropic, OpenAI,
   Google, DeepSeek, and more.
+- **Chat Completions or Responses API.** OpenAI-compatible endpoints can use
+  either protocol via `llm.api_style`.
+- **Codex CLI.** Use an existing Codex OAuth session with an isolated,
+  read-only invocation instead of an HTTP API key.
 - **Pay your provider directly.** There's no Mira markup and no SaaS middle
   tier.
 - **Split indexing and review.** Use a cheap, fast model for indexing and a
@@ -138,6 +159,8 @@ Mira gets better over time without you having to write rules yourself.
 ## Platform integration
 
 - **GitHub App.** Auto-reviews every PR.
+- **Draft-aware reviews.** Draft GitHub PRs are skipped and picked up when they
+  become ready for review.
 - **GitLab.** Auto-reviews every merge request with full feature parity, via a
   group or project access token. See [Set up GitLab](/gitlab).
 - **Forgejo / Codeberg.** Auto-reviews pull requests via an access token and
@@ -154,6 +177,10 @@ Mira gets better over time without you having to write rules yourself.
   matches `dependabot[bot]`.
 - **Chat with the bot.** Mention `@miracodeai <question>` on any PR or MR thread
   and the bot answers using the indexed code as context.
+- **Natural GitHub thread replies.** Plain replies in Mira's own review threads
+  are classified as questions, disagreements, or acknowledgements even without
+  an explicit mention, so Mira can answer or resolve the conversation without
+  adding noise.
 - **Cancel in-progress indexing.** Stop a long-running indexing job from the
   dashboard.
 

@@ -44,21 +44,36 @@ anything you're happy with the default for, and you have your config.
 ```yaml
 # mira.yaml — deployment-wide defaults. Every key is optional.
 llm:
+  provider: "openai" # openai | bedrock | codex-cli
   model: "anthropic/claude-sonnet-4-6"
   fallback_model: "anthropic/claude-haiku-4-5"
   indexing_model: "anthropic/claude-haiku-4-5"
   review_model: "anthropic/claude-sonnet-4-6"
+  security_model: "anthropic/claude-sonnet-4-6"
+  review_reasoning_effort: "off" # off | low | medium | high | xhigh | max
   temperature: 0.2
   max_tokens: 4096
   max_context_tokens: 120000
   # Point at any OpenAI-compatible endpoint — vLLM, Ollama, LiteLLM proxy,
   # LocalAI, llama.cpp, Together, Fireworks, Groq, etc.
   # Defaults to OpenRouter.
+  api_style: "chat" # chat | responses
   base_url: "https://openrouter.ai/api/v1"
   api_key_env: "OPENROUTER_API_KEY"
+  region: "us-east-1"
+  aws_profile: null
+  max_retries: 3
+  request_timeout: 120
+  retry_min_wait: 2
+  retry_max_wait: 30
+  codex_command: "codex"
+  codex_home: null
+  codex_sandbox: "read-only"
+  codex_timeout_seconds: 900
 
 filter:
   confidence_threshold: 0.7
+  category_confidence_thresholds: {}
   max_comments: 5
   min_severity: "nitpick"
   exclude_deleted: true
@@ -84,16 +99,23 @@ review:
   focus_only_on_problems: false
   walkthrough: true
   walkthrough_sequence_diagram: true
+  pr_summary: "disable" # disable | append | replace
   code_context: true
   context_token_budget: 8000
   max_concurrent_chunks: 5
   self_critique: true
   security_pass: true
+  security_agentic: true
+  osv_scan: true
+  secrets_scan: true
   agentic_tools: true
   jit_java_go: true
+  blast_radius: true
   ensemble_runs: 1
   ensemble_temperature: 0.3
   auto_resolve_conversations: true
+  review_on_synchronize: true
+  dependency_overlap: true
   overlap:
     enabled: true
     max_candidates: 20
@@ -110,20 +132,35 @@ Controls which model is used and how it's invoked.
 
 | Key | Type | Default | Description |
 | --- | --- | --- | --- |
+| `provider` | string | `openai` | Model backend: `openai` for OpenAI-compatible HTTP APIs, `bedrock` for AWS Bedrock, or `codex-cli` for a local Codex login. See [Choosing a model](/configuration/models). |
 | `model` | string | `anthropic/claude-sonnet-4-6` | Default model for both indexing and review unless overridden. Any [recognised model](/configuration/models). |
 | `fallback_model` | string | *unset* | If the primary model errors, retry with this one. |
 | `indexing_model` | string | *uses `model`* | Override just for the indexing pass, usually a cheaper/faster model. |
 | `review_model` | string | *uses `model`* | Override just for the review pass, usually a stronger model. |
+| `security_model` | string | *uses `review_model`, then `model`* | Override the focused security pass. It never falls back to `indexing_model`. |
+| `review_reasoning_effort` | string | `off` | Review-only reasoning level: `off`, `low`, `medium`, `high`, `xhigh`, or `max`. Unsupported levels are dropped rather than failing the review. |
 | `temperature` | float | `0.2` | Sampling temperature. Reviews are mostly deterministic; raising this is rarely useful. |
 | `max_tokens` | int | `4096` | Cap on output tokens per LLM call. |
 | `max_context_tokens` | int | `120000` | How many input tokens Mira is willing to spend per call. Trims context to fit. |
-| `base_url` | string | `https://openrouter.ai/api/v1` | The OpenAI-compatible chat-completions endpoint Mira sends requests to. Override for self-hosted models or alternative providers. See [Custom endpoints](#custom-endpoints) below. |
+| `api_style` | string | `chat` | OpenAI-compatible protocol: `chat` for Chat Completions or `responses` for the Responses API. Ignored by Bedrock and Codex CLI. |
+| `base_url` | string | `https://openrouter.ai/api/v1` | The OpenAI-compatible endpoint Mira sends requests to. Override for self-hosted models or alternative providers. See [Custom endpoints](#custom-endpoints) below. |
 | `api_key_env` | string | `OPENROUTER_API_KEY` | Name of the environment variable Mira reads the API key from. Set to `""` (empty string) for local endpoints that need no auth. |
+| `region` | string | `us-east-1` | AWS region used by the Bedrock provider. |
+| `aws_profile` | string | *unset* | Optional named AWS profile for Bedrock; otherwise the standard credential chain is used. |
+| `max_retries` | int | `3` | Attempts per LLM call before giving up. Only transient failures retry (timeouts, network errors, 5xx/429); 4xx errors fail immediately. |
+| `request_timeout` | int (seconds) | `120` | Per-request timeout. Raise for flex-tier models or proxied endpoints that stall under load. |
+| `retry_min_wait` | int (seconds) | `2` | Lower bound of the exponential backoff between retries. |
+| `retry_max_wait` | int (seconds) | `30` | Upper bound of the backoff between retries. |
+| `codex_command` | string | `codex` | Codex executable name or absolute path. Arguments are not accepted. Deployment-only. |
+| `codex_home` | string | `$CODEX_HOME` | Directory containing the operator's `auth.json`. Deployment-only. |
+| `codex_sandbox` | string | `read-only` | Codex execution sandbox. `read-only` is the only accepted value. Deployment-only. |
+| `codex_timeout_seconds` | int | `900` | Timeout for one Codex invocation. Deployment-only. |
 
 ### Custom endpoints
 
-Any OpenAI-compatible chat-completions API works. Point `llm.base_url` at the
-right URL and set `llm.api_key_env` to the env var holding the key. Mira looks
+Any compatible Chat Completions API works. Endpoints that implement the OpenAI
+Responses API can instead set `llm.api_style: responses`. Point `llm.base_url` at
+the right URL and set `llm.api_key_env` to the env var holding the key. Mira looks
 up a **provider profile** by `base_url` to apply any per-provider quirks
 (attribution headers, whether the model id keeps its `vendor/` prefix, reasoning
 remapping); an endpoint with no profile gets the portable default — bare model
@@ -223,16 +260,23 @@ Controls *how* Mira reviews: diff sizing, walkthrough behaviour, parallelism.
 | `focus_only_on_problems` | bool | `false` | If `true`, only flag bugs / blockers, with no improvement suggestions. |
 | `walkthrough` | bool | `true` | Generate a top-level walkthrough comment with file coverage and per-severity stats. |
 | `walkthrough_sequence_diagram` | bool | `true` | Include a Mermaid sequence diagram in the walkthrough where it adds value. |
+| `pr_summary` | string | `disable` | Write an AI-generated release-notes block into the PR/MR description. `append` preserves author text and idempotently updates Mira's marked block; `replace` replaces the whole body. Requires `walkthrough: true`. |
 | `code_context` | bool | `true` | Pull related symbols / files from the index to give the LLM project context, not just diff context. |
 | `context_token_budget` | int | `8000` | How many tokens of indexed context Mira may add per review. |
 | `max_concurrent_chunks` | int (1–20) | `5` | Parallelism for chunk reviews. Raise if your LLM provider can handle it. |
 | `self_critique` | bool | `true` | Second-pass LLM critique on each draft comment; failed ones are dropped. Disable for faster reviews. |
-| `security_pass` | bool | `true` | Dedicated security review pass (XSS, injection, auth bypass, CSRF, SSRF, deserialization, crypto) in parallel with the main review. Runs on the *indexing* tier model; bump `llm.indexing_model` if you want the heavy model here too. |
-| `agentic_tools` | bool | `true` | On unindexed repos, give the reviewer LLM `read_file` / `grep_repo` tools for cross-file context. No effect on indexed repos. |
+| `security_pass` | bool | `true` | Dedicated security review pass (XSS, injection, auth bypass, CSRF, SSRF, deserialization, crypto) in parallel with the main review. Uses `llm.security_model`, falling back to `review_model` and then `model`. |
+| `security_agentic` | bool | `true` | Let the focused security pass use `read_file` / `grep_repo` to verify cross-file claims when agentic tools and a live source fetcher are available. |
+| `osv_scan` | bool | `true` | Query OSV.dev for packages added or upgraded in changed dependency manifests. One batch request per applicable PR; no LLM involved. |
+| `secrets_scan` | bool | `true` | Scan added lines for hardcoded keys, tokens, and passwords with regex and entropy checks. Local and deterministic; no network or LLM call. |
+| `agentic_tools` | bool | `true` | Give the main reviewer `read_file` / `grep_repo` tools for on-demand cross-file context on indexed and unindexed repos. |
 | `jit_java_go` | bool | `true` | JIT cross-file resolver attempts Java + Go imports. Go resolves deterministically when a `go.mod` is present; Java is heuristic. Toggle off to A/B test impact. |
+| `blast_radius` | bool | `true` | Include in-repository callers and cross-repository dependents of changed code in the walkthrough. |
 | `ensemble_runs` | int (1–5) | `1` | Thorough mode: review each chunk N times in parallel and keep only majority-vote findings. Variance-driven false positives flicker across runs; real findings recur. `1` = off. Token cost multiplies by N; wall clock stays roughly flat. |
 | `ensemble_temperature` | float (0.0–1.0) | `0.3` | Sampling temperature for the extra ensemble runs (the first run keeps `llm.temperature`). Mild diversity makes the vote meaningful. |
 | `auto_resolve_conversations` | bool | `true` | Auto-resolve bot review threads the LLM verifies as fixed on each review pass. Disable to leave all bot comments open until a human resolves them (user-initiated reject/resolve replies still work). |
+| `review_on_synchronize` | bool | `true` | Auto-review on every push to an open PR. Set `false` to review only on open/reopen — later commits wait for an explicit `@bot review`. Cuts tokens and noise when you batch commits before pushing. |
+| `dependency_overlap` | bool | `true` | Flag when a PR adds a dependency that duplicates one the repo already has. Runs only when the PR changes a manifest (`package.json`, `pyproject.toml`, `go.mod`, …); lockfiles are excluded. |
 
 ### `review.overlap`
 

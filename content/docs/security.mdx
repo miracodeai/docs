@@ -38,8 +38,8 @@ responsible disclosure regardless.
 ### Known non-issues
 
 - Misconfigurations on setup are **explicitly out of scope**. For example,
-  not setting `MIRA_WEBHOOK_SECRET`, leaving `ADMIN_PASSWORD` at the default,
-  or exposing the dashboard publicly without auth.
+  not setting `MIRA_WEBHOOK_SECRET`, ignoring the generated admin password and
+  never changing it, or exposing the dashboard publicly without auth.
 - Vulnerabilities in third-party dependencies that don't affect Mira's actual
   usage. Please report those upstream.
 - Issues requiring physical access to the host running Mira.
@@ -57,9 +57,18 @@ When you self-host Mira, the following holds by design:
   database. There is no central index store.
 - **Webhook signatures are verified** with HMAC-SHA256 against
   `MIRA_WEBHOOK_SECRET`, and invalid signatures are rejected at the edge.
+- **Outbound notification webhooks are SSRF-guarded.** A configured Slack /
+  Discord / generic webhook URL is blocked if its host resolves to a private,
+  loopback, link-local, reserved, or cloud-metadata address; allow specific
+  internal hosts with `MIRA_WEBHOOK_ALLOWED_HOSTS`.
 - **GitHub App tokens are cached in-process only**, with a 55-minute TTL, and
-  never written to disk. Tokens for installations you've removed expire
-  automatically.
+  never written to disk. Long-lived provider instances resolve the current
+  cached-or-refreshed token for every API call instead of retaining a stale
+  credential. Tokens for installations you've removed expire automatically.
+- **Codex CLI runs isolated and read-only.** When selected as the model backend,
+  Mira copies only `auth.json` into an invocation-scoped temporary home, strips
+  unrelated service credentials from the child environment, disables inherited
+  user/project rules, and runs in an empty workspace with the read-only sandbox.
 - **No license keys and no paywalls.** Mira is fully open source under Apache
   2.0.
 
@@ -72,8 +81,10 @@ Before pointing real PRs at a Mira deployment, work through this list.
    ```bash
    openssl rand -hex 32
    ```
-2. **`ADMIN_PASSWORD`** changed from the default `admin`. Without this, your
-   dashboard is open if it's network-reachable.
+2. **Admin password set and rotated.** There's no built-in default account —
+   either set `ADMIN_PASSWORD`, or use the random password Mira generates on
+   first start (written to `<MIRA_INDEX_DIR>/initial_admin_password`, mode
+   `0600`), then log in, change it, and delete the file.
 3. **TLS in front of Mira.** The image does not terminate TLS. See
    [TLS examples](/deployment/docker#tls) for Caddy, nginx + Let's Encrypt,
    and Cloudflare Tunnel configs, or use a PaaS that handles TLS for you
@@ -88,6 +99,10 @@ Before pointing real PRs at a Mira deployment, work through this list.
    Never commit them.
 7. **Pin the image version.** Use `ghcr.io/miracodeai/mira:vX.Y.Z`, not
    `:latest`, and update on a known cadence after release notes.
+8. **Isolate Codex credentials if you use the CLI provider.** Mount
+   `CODEX_HOME` read-only, use a dedicated account/session, and keep all Codex
+   execution settings in an operator-owned deployment config. Never trust a
+   repository-controlled file with `--trust-execution-settings`.
 
 ## Supply chain hardening (project-side) [#supply-chain]
 
