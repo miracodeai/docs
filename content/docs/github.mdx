@@ -49,7 +49,7 @@ Repository permissions:
 | **Contents** | Read & write | Read source files for indexing/review context, **and resolve review threads** — GitHub's `resolveReviewThread` requires `contents: write`, not just `pull_requests: write`. With only `contents: read`, Mira can post and minimize comments but silently fails to auto-resolve threads. |
 | **Issues** | Read & write | Receive `@mention` comments and post replies. |
 | **Metadata** | Read | Required by GitHub for any app. |
-| **Checks** | Read & write *(optional)* | Surface review status as a check. |
+| **Checks** | Read & write | Publish review progress and results as a check on the PR's head commit. |
 
 ### Subscribe to events
 
@@ -107,6 +107,32 @@ You only need to override this in two cases:
 ```bash
 export MIRA_BOT_NAME=acme-mira
 ```
+
+## Review status on pull requests
+
+From Mira version 0.10.1, reviews publish a check named **Mira**. It appears in the
+checks section near the PR's merge button and in the **Checks** tab, with the
+app's bot avatar and a link back to the PR.
+
+| Review state | Check title | Result |
+| --- | --- | --- |
+| Running | Code Review In Progress | In progress |
+| Finished successfully | Code Review Complete | Success (green) |
+| Stopped due to an unexpected error | Code Review Failed | Failure (red) |
+| Finished, but the enabled walkthrough summary could not be generated | Code Review Completed with Warnings | Neutral |
+
+The completed check's expanded details show the number of files reviewed and
+comments, including the severity breakdown. A disabled walkthrough or a review
+skipped before walkthrough generation completes successfully without a warning.
+
+The check reports whether the review process succeeded. A review can finish
+green even when it finds blockers; read the PR and inline comments for findings
+and the walkthrough for merge confidence.
+
+If no check appears, confirm that the deployed version includes the change and
+the installation has accepted **Checks: Read & write**, then trigger a new
+review. Dry runs and reviews without a head commit SHA publish no check. Errors
+publishing or updating checks are logged and do not stop the review.
 
 ## GitHub Enterprise Server
 

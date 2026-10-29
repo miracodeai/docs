@@ -22,6 +22,12 @@ This is how Mira reviews a pull request.
   entirely. Re-reviews update the existing marked block without duplicating it.
 - **Streaming.** A placeholder comment posts within about a second, the
   walkthrough within ten, and the full review within a minute.
+- **Review status on the PR.** GitHub shows a **Mira** check near the merge
+  button and in the Checks tab, progressing from in progress to success,
+  failure, or neutral when walkthrough generation fails. Expanded details show
+  review stats. Success means the review ran successfully, even if it found
+  blockers. Forgejo shows the lifecycle as a commit status, with warnings
+  mapped to success.
 - **Multi-file reasoning.** Mira reasons across the whole diff rather than
   taking each file in isolation.
 - **Agentic verification.** The reviewer can call `read_file` and `grep_repo`
