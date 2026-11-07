@@ -30,9 +30,23 @@ This is how Mira reviews a pull request.
   mapped to success.
 - **Multi-file reasoning.** Mira reasons across the whole diff rather than
   taking each file in isolation.
-- **Agentic verification.** The reviewer can call `read_file` and `grep_repo`
-  to verify callers and dispatch paths beyond pre-fetched context, whether or
-  not the repository already has an index.
+- **Agentic verification.** The reviewer can call `read_file` (with line
+  windows for large files) and `grep_repo` (ranked by filename, proximity to
+  the changed files, and language) to verify callers and dispatch paths beyond
+  pre-fetched context, whether or not the repository already has an index. It
+  gets `review.agentic_max_hops` investigation turns per chunk; when they run
+  out, the submission is forced over the full transcript rather than thrown
+  away.
+- **Second look (opt-in).** After the reviewer submits, Mira can ask it once
+  more, over the same transcript, to file the concrete defects it analysed but
+  withheld. One extra prompt-cached call per chunk; enable with
+  `review.second_look: true` when recall matters more than quiet.
+- **Unverified findings (opt-in).** Findings the self-critique graded
+  *plausible* but did not post can be listed in a collapsed "Worth a look (not
+  verified)" walkthrough section via `review.show_unverified_findings`.
+- **Honest incomplete reviews.** When a chunk fails for good, the walkthrough
+  says which files were not reviewed and `review-rest` retries them, instead
+  of reporting a clean result.
 - **Parallel chunk review.** Large diffs are split into chunks and reviewed in
   parallel (`max_concurrent_chunks`).
 - **Dedupe.** Comments that repeat across chunks and files are collapsed using
@@ -161,6 +175,9 @@ Mira gets better over time without you having to write rules yourself.
   stronger one for review. See [Choosing a model](/configuration/models).
 - **Fallback chain.** If the primary model errors, Mira retries with
   `fallback_model`.
+- **Prompt caching.** On Anthropic models via OpenRouter, the stable review
+  instructions go out as a cached prefix, so repeat reviews pay the cache-read
+  price for them. `llm.prompt_caching: false` turns it off.
 
 ## Platform integration
 
@@ -171,6 +188,8 @@ Mira gets better over time without you having to write rules yourself.
   group or project access token. See [Set up GitLab](/gitlab).
 - **Forgejo / Codeberg.** Auto-reviews pull requests via an access token and
   webhook. See [Set up Forgejo](/forgejo).
+- **Bitbucket Cloud.** Auto-reviews pull requests via an access or API token
+  and a workspace webhook. See [Set up Bitbucket](/bitbucket).
 - **Self-managed / Enterprise.** Point
   [`MIRA_GITHUB_API_URL`](/configuration/environment#github-app) at GitHub
   Enterprise Server, [`MIRA_GITLAB_API_URL`](/configuration/environment#gitlab)

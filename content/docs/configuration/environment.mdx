@@ -16,11 +16,11 @@ for things you don't want in a checked-in YAML file. `MIRA_MODEL` and
 
 ## Required at minimum
 
-Credentials for **at least one** platform — GitHub, GitLab, or Forgejo — are
-required. LLM credentials depend on the backend: an OpenRouter/API key for the
-default OpenAI-compatible provider, the AWS credential chain for Bedrock, or a
-Codex login for `codex-cli`. `mira serve` won't start without one platform
-configured.
+Credentials for **at least one** platform — GitHub, GitLab, Forgejo, or
+Bitbucket Cloud — are required. LLM credentials depend on the backend: an
+OpenRouter/API key for the default OpenAI-compatible provider, the AWS
+credential chain for Bedrock, or a Codex login for `codex-cli`. `mira serve`
+won't start without one platform configured.
 
 | Variable | Description |
 | --- | --- |
@@ -32,6 +32,8 @@ configured.
 | `MIRA_GITLAB_WEBHOOK_SECRET` | **GitLab:** secret token, matching the one set on the project/group webhook. |
 | `MIRA_FORGEJO_TOKEN` | **Forgejo:** an access token with repository read/write. See the [Forgejo setup guide](/forgejo). |
 | `MIRA_FORGEJO_WEBHOOK_SECRET` | **Forgejo:** webhook secret, matching the one set on the repo/org webhook. |
+| `MIRA_BITBUCKET_TOKEN` | **Bitbucket Cloud:** a workspace, project, or repository access token, or an Atlassian API token as `email:token`. See the [Bitbucket setup guide](/bitbucket). |
+| `MIRA_BITBUCKET_WEBHOOK_SECRET` | **Bitbucket Cloud:** webhook secret, matching the one set on the workspace or repository webhook. |
 
 ## GitHub App
 
@@ -58,8 +60,8 @@ optional when GitLab is set. Full walkthrough: [Set up GitLab](/gitlab).
 
 ## Forgejo
 
-Configure these to review Forgejo (or Codeberg) pull requests. GitHub and
-GitLab variables become optional when Forgejo is set. Full walkthrough:
+Configure these to review Forgejo (or Codeberg) pull requests. The other
+platforms' variables become optional when Forgejo is set. Full walkthrough:
 [Set up Forgejo](/forgejo).
 
 | Variable | Default | Description |
@@ -67,6 +69,21 @@ GitLab variables become optional when Forgejo is set. Full walkthrough:
 | `MIRA_FORGEJO_TOKEN` | — | **Required for Forgejo.** Access token with repository read/write. The token's user is who Mira comments as. |
 | `MIRA_FORGEJO_WEBHOOK_SECRET` | — | **Required for Forgejo.** HMAC-SHA256 secret compared against each webhook's `X-Forgejo-Signature`. |
 | `MIRA_FORGEJO_API_URL` | `https://codeberg.org/api/v1` | API base for self-hosted instances, e.g. `https://git.acme.com/api/v1`. |
+| `MIRA_FORGEJO_BASE_URL` | *inferred from `MIRA_FORGEJO_API_URL`* | Web root of the instance, used for compare and diff requests. Mira derives it by dropping `/api/v1` from the API URL (subpaths are kept), so most self-hosted setups never set it. Set it explicitly when the API URL does not end in `/api/v1`; otherwise `mira serve` fails at startup with a config error rather than sending requests to the wrong host. |
+
+## Bitbucket Cloud
+
+Configure these to review Bitbucket Cloud pull requests. The other platforms'
+variables become optional when Bitbucket is set. Full walkthrough:
+[Set up Bitbucket](/bitbucket).
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `MIRA_BITBUCKET_TOKEN` | — | **Required for Bitbucket.** Either a workspace, project, or repository **access token** (sent as a Bearer token; comments post as the token's bot user) or an Atlassian **API token** for a bot account, given as `email:token` (sent as HTTP Basic auth; comments post as that account). Needs repository read, pull request read/write, and webhook read/write scopes. |
+| `MIRA_BITBUCKET_WEBHOOK_SECRET` | — | **Required for Bitbucket.** HMAC-SHA256 secret compared against each webhook's `X-Hub-Signature`. |
+| `MIRA_BITBUCKET_WORKSPACE` | *unset* | Workspace slug that scopes repository discovery in the dashboard. |
+| `MIRA_BITBUCKET_BOT_USER` | *learned from Mira's first comment* | The bot's nickname or account id. Access tokens cannot call `GET /user`, so set this when Mira must recognise its own comments before it has posted one. |
+| `MIRA_BITBUCKET_API_URL` | `https://api.bitbucket.org/2.0` | Override for the Bitbucket Cloud REST 2.0 API base, e.g. when the API is reached through a proxy. Mira speaks the Cloud API only. |
 
 ## LLM
 
@@ -128,7 +145,7 @@ control when Mira synthesizes a new rule from feedback signals.
 ## A complete `.env`
 
 ```bash
-# GitHub App (or use GitLab/Forgejo below — at least one platform required)
+# GitHub App (or use GitLab/Forgejo/Bitbucket below — at least one platform required)
 export MIRA_GITHUB_APP_ID=123456
 export MIRA_GITHUB_PRIVATE_KEY="$(cat ./private-key.pem)"
 export MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
@@ -140,6 +157,10 @@ export MIRA_WEBHOOK_SECRET=replace-with-32-bytes-of-random
 # Forgejo / Codeberg (alternative or in addition to the above)
 # export MIRA_FORGEJO_TOKEN=your-access-token
 # export MIRA_FORGEJO_WEBHOOK_SECRET=replace-with-32-bytes-of-random
+
+# Bitbucket Cloud (alternative or in addition to the above)
+# export MIRA_BITBUCKET_TOKEN=your-access-token   # or email:api-token
+# export MIRA_BITBUCKET_WEBHOOK_SECRET=replace-with-32-bytes-of-random
 
 # LLM
 export OPENROUTER_API_KEY=sk-or-v1-your-key-here

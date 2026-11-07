@@ -11,8 +11,9 @@ that instead. You can also mention the bot's real account username — both work
 > Tip: post `@miracodeai help` on any PR to see this list inline.
 
 <Callout type="info">
-  Everything here works identically on **GitLab merge requests** — "PR" reads as
-  "MR", and commands go in MR comments or diff-thread replies.
+  Everything here works identically on **GitLab merge requests**, **Forgejo**,
+  and **Bitbucket Cloud** pull requests — on GitLab "PR" reads as "MR", and
+  commands go in MR comments or diff-thread replies.
 </Callout>
 
 ## PR comments
@@ -56,5 +57,9 @@ treats the PR from the start.
 - Commands are **case-insensitive**: `@miracodeai REVIEW` works.
 - Mira ignores its own comments, so quoting `@miracodeai review` inside a
   walkthrough doesn't trigger a self-loop.
+- On Bitbucket, `pause` state is kept in Mira's database (Bitbucket PRs have no
+  labels), and `commands.allowed_users` takes account ids, not nicknames. See
+  [Set up Bitbucket](/bitbucket#bitbucket-differences).
 - All commands require Mira to be connected to the repository. See
-  [Set up GitHub](/github) or [Set up GitLab](/gitlab) if you haven't yet.
+  [Set up GitHub](/github), [GitLab](/gitlab), [Forgejo](/forgejo), or
+  [Bitbucket](/bitbucket) if you haven't yet.
