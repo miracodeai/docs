@@ -50,9 +50,9 @@ llm:
   indexing_model: "anthropic/claude-haiku-4-5"
   review_model: "anthropic/claude-sonnet-4-6"
   security_model: "anthropic/claude-sonnet-4-6"
-  review_reasoning_effort: "off" # off | low | medium | high | xhigh | max
+  review_reasoning_effort: "medium" # off | low | medium | high | xhigh | max
   temperature: 0.2
-  max_tokens: 4096
+  max_tokens: 16384
   max_context_tokens: 120000
   # Point at any OpenAI-compatible endpoint — vLLM, Ollama, LiteLLM proxy,
   # LocalAI, llama.cpp, Together, Fireworks, Groq, etc.
@@ -148,9 +148,9 @@ Controls which model is used and how it's invoked.
 | `indexing_model` | string | *uses `model`* | Override just for the indexing pass, usually a cheaper/faster model. |
 | `review_model` | string | *uses `model`* | Override just for the review pass, usually a stronger model. |
 | `security_model` | string | *uses `review_model`, then `model`* | Override the focused security pass. It never falls back to `indexing_model`. |
-| `review_reasoning_effort` | string | `off` | Review-only reasoning level: `off`, `low`, `medium`, `high`, `xhigh`, or `max`. Unsupported levels are dropped rather than failing the review. |
+| `review_reasoning_effort` | string | `medium` | Review-only reasoning level: `off`, `low`, `medium`, `high`, `xhigh`, or `max`. `off` disables thinking, including on models that think by default. Unsupported levels are dropped rather than failing the review. |
 | `temperature` | float | `0.2` | Sampling temperature. Reviews are mostly deterministic; raising this is rarely useful. |
-| `max_tokens` | int | `4096` | Cap on output tokens per LLM call. |
+| `max_tokens` | int | `16384` | Cap on output tokens per LLM call. Thinking tokens count against it on most providers; an endpoint that rejects the budget is retried at 4096 and kept there for that model. |
 | `max_context_tokens` | int | `120000` | How many input tokens Mira is willing to spend per call. Trims context to fit. |
 | `api_style` | string | `chat` | OpenAI-compatible protocol: `chat` for Chat Completions or `responses` for the Responses API. Ignored by Bedrock and Codex CLI. |
 | `base_url` | string | `https://openrouter.ai/api/v1` | The OpenAI-compatible endpoint Mira sends requests to. Override for self-hosted models or alternative providers. See [Custom endpoints](#custom-endpoints) below. |
