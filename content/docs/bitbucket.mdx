@@ -1,0 +1,92 @@
+---
+title: Set up Bitbucket
+description: Connect Mira to Bitbucket Cloud with an access token or Atlassian API token and a workspace webhook — the same review pipeline as GitHub, GitLab, and Forgejo.
+---
+
+Mira reviews Bitbucket Cloud pull requests with the same feature set as the
+other platforms: inline comments, `@mention` commands, pause/resume,
+incremental re-review, indexing on push, and merge-time learning. Like GitLab
+and Forgejo, there is no app to install — you give Mira a **token** and point
+a **webhook** at your deployment.
+
+<Callout type="info">
+  Mira speaks the Bitbucket **Cloud** REST 2.0 API (`bitbucket.org`). Set
+  `MIRA_BITBUCKET_API_URL` only if you reach that API through a proxy.
+</Callout>
+
+## 1. Create a token
+
+Two credential shapes work in `MIRA_BITBUCKET_TOKEN`:
+
+| Credential | Where to create it | How Mira uses it |
+| --- | --- | --- |
+| **Access token** for a workspace, project, or repository | **Workspace settings → Access tokens** (or the project / repository equivalent) | Sent as a Bearer token. Comments post as the token's bot user. |
+| **Atlassian API token** for a (bot) account | [Atlassian account → Security → API tokens](https://id.atlassian.com/manage-profile/security/api-tokens), used as `email:token` | Sent as HTTP Basic auth. Comments post as that account, so a dedicated bot account keeps threads tidy. |
+
+Grant **repository: read**, **pull requests: read and write**, and **webhooks:
+read and write**. Copy the token — it's shown once.
+
+<Callout type="info">
+  Access tokens cannot call `GET /user`, so Mira learns which account it posts
+  as from its first comment on a PR and remembers it. If Mira must recognise
+  its own comments before then, set `MIRA_BITBUCKET_BOT_USER` to the bot's
+  nickname or account id.
+</Callout>
+
+## 2. Add a webhook
+
+On the workspace (to cover every repository) or on a single repository, go to
+**Settings → Webhooks → Add webhook**:
+
+| Field | Value |
+| --- | --- |
+| **URL** | `https://your-server.com/bitbucket/webhook` |
+| **Secret** | A random 32+ byte string. Save it as `MIRA_BITBUCKET_WEBHOOK_SECRET`. |
+| **Triggers** | **Repository: Push** (keeps the index fresh), **Pull request: Created, Updated, Merged, Comment created** (auto-review, commands and replies, merge-time learning). |
+
+Bitbucket signs each delivery with HMAC-SHA256 in the `X-Hub-Signature`
+header; Mira verifies every request against `MIRA_BITBUCKET_WEBHOOK_SECRET`.
+**Pull request: Updated** also fires for title and description edits, so Mira
+only re-reviews when the source commit changed.
+
+## 3. Configure Mira
+
+Set the Bitbucket environment variables (see the full
+[environment reference](/configuration/environment#bitbucket-cloud)):
+
+```bash
+export MIRA_BITBUCKET_TOKEN=…                  # access token, or email:api-token
+export MIRA_BITBUCKET_WEBHOOK_SECRET=…         # matches the webhook secret
+# Optional:
+export MIRA_BITBUCKET_WORKSPACE=acme           # scopes dashboard repo discovery
+export MIRA_BITBUCKET_BOT_USER=mira            # bot nickname if the token can't read /user
+```
+
+GitHub, GitLab, and Forgejo credentials are **optional** when Bitbucket is
+configured — set any one platform, or any combination. `mira serve` exposes
+`/bitbucket/webhook` alongside the other platforms' webhook routes.
+
+## 4. Open a pull request
+
+A repository becomes known to Mira the first time it sees a PR for it, or when
+you add it from the dashboard (`MIRA_BITBUCKET_WORKSPACE` scopes discovery
+there). Open or update a PR and Mira posts a walkthrough and inline review.
+
+## Bitbucket differences
+
+- **No labels.** Bitbucket PRs have no labels, so `@miracodeai pause` state is
+  kept in Mira's database instead of a `mira-paused` label. `pause` and
+  `resume` work the same.
+- **Who may run commands.** Mira checks the commenter's repository permission
+  through the workspace permissions API, which needs a credential with
+  workspace **admin** rights. Without it, list reviewers' **account ids** in
+  [`commands.allowed_users`](/configuration/global-config#commands).
+- **Account ids, not nicknames.** Bitbucket nicknames are not unique, so
+  command authorisation and the allowlist match the commenter's account id,
+  never the nickname.
+- **Indexing on push.** `repo:push` events carry no file lists, so Mira reads
+  the changed paths from the diffstat API. Branch and tag names are resolved to
+  a commit before indexing.
+
+All [commands](/commands) otherwise work the same as on GitHub:
+`@miracodeai review`, `pause` / `resume`, `reject`, and free-form questions.

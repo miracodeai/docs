@@ -1,10 +1,10 @@
 ---
 title: Quickstart
-description: Deploy Mira, connect GitHub or GitLab, and watch it review your first pull request.
+description: Deploy Mira, connect GitHub, GitLab, Forgejo, or Bitbucket, and watch it review your first pull request.
 ---
 
 This guide takes you from zero to a Mira review on a real PR in about ten
-minutes. You'll pick a deployment target, connect GitHub or GitLab, and then
+minutes. You'll pick a deployment target, connect your git platform, and then
 open a pull request.
 
 ## 1. Get an OpenRouter API key
@@ -16,12 +16,12 @@ Anthropic, OpenAI, Google, DeepSeek, and more.
 2. Generate a key. The free tier is enough to test Mira on a few PRs.
 3. Save it as `OPENROUTER_API_KEY`.
 
-## 2. Connect GitHub, GitLab, or Forgejo
+## 2. Connect GitHub, GitLab, Forgejo, or Bitbucket
 
 Pick your platform — or several; one Mira deployment can review on each at
 the same time.
 
-<Tabs items={['GitHub', 'GitLab', 'Forgejo']}>
+<Tabs items={['GitHub', 'GitLab', 'Forgejo', 'Bitbucket']}>
   <Tab value="GitHub">
     Mira runs as a GitHub App that auto-reviews every PR.
 
@@ -37,8 +37,9 @@ the same time.
     - **Webhook secret**: generate any 32+ byte random string and save it as
       `MIRA_WEBHOOK_SECRET`.
     - **Permissions**: Pull Requests (read & write), Contents (read & write),
-      Issues (read & write), Metadata (read). Contents needs **write** (not just
-      read) so Mira can auto-resolve review threads — GitHub requires it.
+      Issues (read & write), Checks (read & write), Metadata (read). Contents
+      needs **write** (not just read) so Mira can auto-resolve review threads —
+      GitHub requires it. Checks publishes the review status on the PR.
     - **Events**: Pull request, Issue comment, Push, Installation.
     - **Private key**: generate a `.pem` and download it.
 
@@ -82,6 +83,26 @@ the same time.
       **Pull request**, **Issue comment**, and **Push** events.
     - **Self-hosted instance?** Also set `MIRA_FORGEJO_API_URL` to your API
       base, e.g. `https://git.acme.com/api/v1` (defaults to Codeberg).
+  </Tab>
+  <Tab value="Bitbucket">
+    Bitbucket Cloud uses an **access token** (or an Atlassian API token as
+    `email:token`) plus a **webhook**, like GitLab.
+
+    <Callout type="info">
+      The detailed walkthrough is in [Set up Bitbucket](/bitbucket).
+      The summary below is the minimum required to start a deployment.
+    </Callout>
+
+    - **Token**: create a workspace, project, or repository access token with
+      repository read, pull requests read/write, and webhooks read/write — or
+      use an Atlassian API token for a bot account as `email:token`. Save it as
+      `MIRA_BITBUCKET_TOKEN`.
+    - **Webhook**: on the workspace or repo, **Settings → Webhooks → Add
+      webhook**, set the URL to `https://your-server.com/bitbucket/webhook`
+      (you'll fill this in once you've deployed in step 3), set the secret to a
+      random 32+ byte string saved as `MIRA_BITBUCKET_WEBHOOK_SECRET`, and
+      enable **Repository: Push** and **Pull request: Created, Updated, Merged,
+      Comment created**.
   </Tab>
 </Tabs>
 

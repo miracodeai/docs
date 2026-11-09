@@ -12,8 +12,10 @@ at your deployment.
 <Callout type="info">
   [Codeberg](https://codeberg.org) works out of the box (it's the default API
   endpoint). For a self-hosted Forgejo instance, set `MIRA_FORGEJO_API_URL` to
-  your instance's API base (e.g. `https://git.acme.com/api/v1`). Gitea
-  instances are API-compatible and generally work too.
+  your instance's API base (e.g. `https://git.acme.com/api/v1`). Mira derives
+  the instance's web URL from it by dropping `/api/v1`, so `MIRA_FORGEJO_BASE_URL`
+  is only needed when your API URL has a different shape. Gitea instances are
+  API-compatible and generally work too.
 </Callout>
 
 ## 1. Create an access token
@@ -54,12 +56,14 @@ export MIRA_FORGEJO_TOKEN=…                    # the access token from step 1
 export MIRA_FORGEJO_WEBHOOK_SECRET=…           # matches the webhook secret
 # Self-hosted only (defaults to Codeberg):
 export MIRA_FORGEJO_API_URL=https://git.acme.com/api/v1
+# Only if the API URL doesn't end in /api/v1 (otherwise inferred from it):
+# export MIRA_FORGEJO_BASE_URL=https://git.acme.com
 ```
 
-GitHub and GitLab credentials are **optional** when Forgejo is configured —
-set any one platform, or any combination. `mira serve` exposes a webhook
-route per configured platform (`/github/webhook`, `/gitlab/webhook`,
-`/forgejo/webhook`) and reviews repos on each.
+GitHub, GitLab, and Bitbucket credentials are **optional** when Forgejo is
+configured — set any one platform, or any combination. `mira serve` exposes a
+webhook route per configured platform (`/github/webhook`, `/gitlab/webhook`,
+`/forgejo/webhook`, `/bitbucket/webhook`) and reviews repos on each.
 
 Mira's `@mention` handle is auto-detected from the token user's username; set
 `MIRA_BOT_NAME` to override it. A teammate can mention either name.
